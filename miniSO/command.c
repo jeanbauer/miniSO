@@ -1,6 +1,6 @@
 /*
  * Universidade Luterana do Brasil
- * Curso de Bacharelado em CiÍncia da ComputaÁ„o
+ * Curso de Bacharelado em Ci√™ncia da Computa√ß√£o
  * Disciplina: Projeto de Sistemas Operacionais
  * Professor: Roland Teodorowitsch
  *
@@ -10,31 +10,30 @@
  */
 
 
-/* --- INCLUS√O DE ARQUIVOS ------------------------------*/
+/* --- INCLUS√ÉO DE ARQUIVOS ------------------------------*/
 
 #include "miniSO.h"
 #include "command.h"
 #include "lib.h"
 
 
-/* --- VARI¡VEIS GLOBAIS ---------------------------------*/
+/* --- VARI√ÅVEIS GLOBAIS ---------------------------------*/
 
-static int	end_command;	/* Controla o fim de execuÁ„o do interpretador de comandos */
-/* Vari·veis para leitura da linha de comandos */
+static int	end_command;	/* Controla o fim de execu√ß√£o do interpretador de comandos */
+/* Vari√°veis para leitura da linha de comandos */
 static char	cmdline [MAXLINE+1];
 static char	palavra [MAXLINE+1];
 static char	argline [MAXLINE+1+MAXARGS*VAR_VALOR_TAM];
 static char far *argv [MAXARGS];
-/* Vari·veis para controle do histÛrico */
+/* Vari√°veis para controle do hist√≥rico */
 static char	history [MAXHISTORY][MAXLINE+1];
-static int	history_len;	/* N˙mero de itens no histÛrico */
-static int	history_ini;	/* Indice do primeiro item do histÛrico */
-static int	history_nxt;	/* PrÛximo item do histÛrico */
-static int	history_pos;	/* PosiÁ„o para navegaÁ„o no histÛrico */
-
-/* Vari·veis para definiÁ„o de vari·veis internas */
-static int num_var = 0;		/* N˙mero de vari·veis definidas */
-static variable_t var[VAR_MAX];	/* Conte˙do das vari·veis definidas */
+static int	history_len;	/* N√∫mero de itens no hist√≥rico */
+static int	history_ini;	/* Indice do primeiro item do hist√≥rico */
+static int	history_nxt;	/* Pr√≥ximo item do hist√≥rico */
+static int	history_pos;	/* Posi√ß√£o para navega√ß√£o no hist√≥rico */
+/* Vari√°veis para defini√ß√£o de vari√°veis internas */
+static int num_var = 0;		/* N√∫mero de vari√°veis definidas */
+static variable_t var[VAR_MAX];	/* Conte√∫do das vari√°veis definidas */
 /* Tabela de comandos internos */
 static command_t commands[MAXCOMMANDS] = {
   "?","                   exibe estas informacoes",				cmd_help,
@@ -62,18 +61,19 @@ static command_t commands[MAXCOMMANDS] = {
   "semdestroy"," <semid>  destroi um semaforo",					cmd_semdestroy,
   "stop"," <pid> suspende um processo/thread",                  cmd_stop,
   "resume"," <pid> reinicia um processo/thread",                cmd_resume,
-  "prodcons"," inicia o processo consumidor e produtor", cmd_prodcons,
-  "tprod","  inicia produtor", cmd_tprod,
-  "tcons","  inicia consumidor", cmd_tcons
+  "prodcons","<val> <val> <val> inicia produtor consumidor e buffer",  		cmd_prodcons,
+  "tprod","<val>          inicia produtor",                		cmd_tprod,
+  "tcons","<val>          inicia consumidor",  					cmd_tcons
 };
 
+/* --- SC (variaveis) --- */
 
-/* --- SESSAO CRITICA (variaveis) ------------------------*/
+static int tamanhoDoBuffer = 0; 
+
+// depende do processador
+static long tamSegundo = 300000;
+
 static int buffer[20];
-
-static long segundoDoProcessador = 600000; // varia de processador para processador
-
-static int tamanhoDoBuffer = 0;
 static int tempoDeProducao;
 static int tempoDeConsumo;
 
@@ -81,8 +81,7 @@ static semid_t mutex;
 static semid_t vazio;
 static semid_t cheio;
 
-
-/* --- FUN«’ES -------------------------------------------*/
+/* --- FUN√á√ïES -------------------------------------------*/
 
 void command()
 {
@@ -91,8 +90,8 @@ void command()
   int i,achou,pos;
   int novalinha,res,argc;
   char far *ptrline,far *var;
-    
-  /* InicializaÁıes... */
+
+  /* Inicializa√ß√µes... */
   numcar = 0;
   end_command = 0;
   history_ini = 0;
@@ -102,24 +101,21 @@ void command()
   setcolor(7);
   clrscr();
   setcolor(LOGOCOLOR);
-  putstr("                  ‹‹‹‹‹‹‹  ‹‹‹‹‹‹\n");
-  putstr(" ‹‹‹‹‹  ‹  ‹‹‹  ‹ €€   ﬂﬂ  €€  €€  "); setcolor(7); putstr("MinisSistema Operacional\n"); setcolor(LOGOCOLOR);
-  putstr("‹€ € € ‹€ ‹€ € ‹€ ﬂﬂﬂﬂ€€€ €€€  €€  "); setcolor(7); putstr("Vs "); putstr(miniSO_VERSION); putstr("\n"); setcolor(LOGOCOLOR);
-  putstr("€€ € € €€ €€ € €€ €€‹‹€€€ €€€‹‹€€  "); setcolor(7); putstr("por Roland Teodorowitsch\n");
-  putstr("€€ € € €€ €€ € €€ €€‹‹€€€ €€€‹‹€€  "); setcolor(7); putstr("alteracoes por Jean Bauer\n");
+  putstr("                  √ú√ú√ú√ú√ú√ú√ú  √ú√ú√ú√ú√ú√ú\n");
+  putstr(" √ú√ú√ú√ú√ú  √ú  √ú√ú√ú  √ú √õ√õ   √ü√ü  √õ√õ  √õ√õ  "); setcolor(7); putstr("MinisSistema Operacional\n"); setcolor(LOGOCOLOR);
+  putstr("√ú√õ √õ √õ √ú√õ √ú√õ √õ √ú√õ √ü√ü√ü√ü√õ√õ√õ √õ√õ√õ  √õ√õ  "); setcolor(7); putstr("Vs "); putstr(miniSO_VERSION); putstr("\n"); setcolor(LOGOCOLOR);
+  putstr("√õ√õ √õ √õ √õ√õ √õ√õ √õ √õ√õ √õ√õ√ú√ú√õ√õ√õ √õ√õ√õ√ú√ú√õ√õ  "); setcolor(7); putstr("por Roland Teodorowitsch\n");
+  putstr("√õ√õ √õ √õ √õ√õ √õ√õ √õ √õ√õ √õ√õ√ú√ú√õ√õ√õ √õ√õ√õ√ú√ú√õ√õ  "); setcolor(7); putstr("mod. por Jean Bauer\n");
 
   putstr("\nDigite 'help' ou '?' para ajuda...\n\n");
 
-  putstr("\nModificado em 25/10/2017\n\n");
-  putstr("\nPor Jean... testando output\n\n");
-
-  /* Inicializa vari·veis de ambiente */
+  /* Inicializa vari√°veis de ambiente */
   command_var_init();
   command_var_set("PROMPT","miniSO>");
   command_var_set("ERRORLEVEL","0");
   /* Imprime sinal de pronto */
   command_showprompt();
-  /* LaÁo para interpretaÁ„o de comandos */
+  /* La√ßo para interpreta√ß√£o de comandos */
   while ( !end_command )  {
         car=getch();
         switch (car)  {
@@ -149,7 +145,7 @@ void command()
                                       command_backspace();
                                 }
                                 putch('\n');
-                                /* Imprime o histÛrico */
+                                /* Imprime o hist√≥rico */
                                 for (i=0;i<history_len;++i)  {
                                     putstr(history[(history_ini+i)%MAXHISTORY]);
                                     putch('\n');
@@ -243,7 +239,7 @@ void command()
                     history_pos = -1;
                     putch('\n');
                     cmdline[numcar]='\0';
-                    /* Divide a linha de comandos em comando e opÁıes */
+                    /* Divide a linha de comandos em comando e op√ß√µes */
                     ptrline = cmdline;
                     argc = 0;
                     pos = 0;
@@ -275,12 +271,12 @@ void command()
                              break;
                           ++ptrline;
                     }
-                    /* Se È comando vazio n„o faz nada */
+                    /* Se √© comando vazio n√£o faz nada */
                     if (argc==0)  {
                        command_showprompt();
                        break;
                     }
-                    /* Salva linha de comando no histÛrico */
+                    /* Salva linha de comando no hist√≥rico */
                     strcpy (history[history_nxt],cmdline);
                     if (history_len<MAXHISTORY)
                        ++history_len;
@@ -294,7 +290,7 @@ void command()
                        history_nxt = 0;
                     else
                        ++history_nxt;
-                    /* Verifica qual È o comando ... */
+                    /* Verifica qual √© o comando ... */
                     achou = 0;
                     for (i=0;i<MAXCOMMANDS;++i)  {
                         if (strcmp(argv[0],commands[i].name)==0)  {
@@ -327,8 +323,6 @@ void command()
 
 }
 
-
-
 static void command_backspace()
 {
   int x,y;
@@ -340,8 +334,6 @@ static void command_backspace()
   putch(' ');
   gotoxy(x,y);
 }
-
-
 
 static void command_showprompt()
 {
@@ -358,8 +350,6 @@ static void command_showprompt()
   putch(' ');
 }
 
-
-
 static void command_var_init()
 {
   int i;
@@ -370,8 +360,6 @@ static void command_var_init()
   }
   num_var = 0;
 }
-
-
 
 static int command_var_nextfree()
 {
@@ -384,8 +372,6 @@ static int command_var_nextfree()
          return i;
   return -1;
 }
-
-
 
 static void command_var_list()
 {
@@ -405,8 +391,6 @@ static void command_var_list()
   }
 }
 
-
-
 static int  command_var_search(char far *nome)
 {
   int i;
@@ -419,7 +403,6 @@ static int  command_var_search(char far *nome)
   }
   return -1;
 }
-
 
 static int  command_var_unset(char far *nome)
 {
@@ -434,7 +417,6 @@ static int  command_var_unset(char far *nome)
   return 0;
 }
 
-
 static char far *command_var_value(char far *nome)
 {
   int i;
@@ -444,7 +426,6 @@ static char far *command_var_value(char far *nome)
      return NULL;
   return var[i].value;
 }
-
 
 static int command_var_set(char far *nome,char far *valor)
 {
@@ -465,7 +446,6 @@ static int command_var_set(char far *nome,char far *valor)
   return 0;
 }
 
-
 int cmd_reboot(int argc, char far *argv[])
 {
   argc=argc;
@@ -474,7 +454,6 @@ int cmd_reboot(int argc, char far *argv[])
   return 0;
 }
 
-
 int cmd_exit(int argc, char far *argv[])
 {
   argc=argc;
@@ -482,7 +461,6 @@ int cmd_exit(int argc, char far *argv[])
   end_command = 1;
   return 0;
 }
-
 
 int cmd_help(int argc, char far *argv[])
 {
@@ -498,7 +476,6 @@ int cmd_help(int argc, char far *argv[])
   }
   return 0;
 }
-
 
 int cmd_date(int argc, char far *argv[])
 {
@@ -523,7 +500,6 @@ int cmd_date(int argc, char far *argv[])
   return 0;
 }
 
-
 int cmd_time(int argc, char far *argv[])
 {
   struct time t;
@@ -546,7 +522,6 @@ int cmd_time(int argc, char far *argv[])
   return 0;
 }
 
-
 int cmd_cls(int argc, char far *argv[])
 {
   argc=argc;
@@ -554,7 +529,6 @@ int cmd_cls(int argc, char far *argv[])
   clrscr();
   return 0;
 }
-
 
 int cmd_ver(int argc, char far *argv[])
 {
@@ -565,7 +539,6 @@ int cmd_ver(int argc, char far *argv[])
   putch('\n');
   return 0;
 }
-
 
 int cmd_ps(int argc, char far *argv[])
 {
@@ -639,7 +612,6 @@ int cmd_ps(int argc, char far *argv[])
   return 0;
 }
 
-
 int cmd_kill(int argc, char far *argv[])
 {
   int t=0;
@@ -658,7 +630,6 @@ int cmd_kill(int argc, char far *argv[])
   }
   return 0;
 }
-
 
 int cmd_set(int argc, char far *argv[])
 {
@@ -691,7 +662,6 @@ int cmd_set(int argc, char far *argv[])
   return 0;
 }
 
-
 int cmd_unset(int argc, char far *argv[])
 {
   int res;
@@ -707,7 +677,6 @@ int cmd_unset(int argc, char far *argv[])
   }
   return 0;
 }
-
 
 int cmd_echo(int argc, char far *argv[])
 {
@@ -729,7 +698,6 @@ int cmd_echo(int argc, char far *argv[])
   return 0;
 }
 
-
 static void demo (void);
 
 static int demo_linha = -4;
@@ -744,11 +712,11 @@ void demo()
   char str[20];
   int ec = exitcode;
 
-  putstrxy(65,ini+0,"⁄ƒƒ Thread ƒƒƒƒø");
-  putstrxy(65,ini+1,"≥ PID  =       ≥");
-  putstrxy(65,ini+2,"≥ Execucao:    ≥");
-  putstrxy(65,ini+3,"≥              ≥");
-  putstrxy(65,ini+4,"¿ƒƒƒƒƒƒƒƒƒƒƒƒƒƒŸ");
+  putstrxy(65,ini+0,"√ö√Ñ√Ñ Thread √Ñ√Ñ√Ñ√Ñ¬ø");
+  putstrxy(65,ini+1,"¬≥ PID  =       ¬≥");
+  putstrxy(65,ini+2,"¬≥ Execucao:    ¬≥");
+  putstrxy(65,ini+3,"¬≥              ¬≥");
+  putstrxy(65,ini+4,"√Ä√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√ô");
 
   inttostr(str,getpid());
   putstrxy(74,ini+1,str);
@@ -779,7 +747,6 @@ void demo()
   }
   exit(ec);
 }
-
 
 int cmd_demo(int argc, char far *argv[])
 {
@@ -822,7 +789,6 @@ int cmd_waitpid(int argc, char far *argv[])
 	return 0;
 }
 
-
 int cmd_wait(int argc, char far *argv[])
 {
 	int	status=123;
@@ -841,7 +807,6 @@ int cmd_wait(int argc, char far *argv[])
 	putstr("!\n");
 	return 0;
 }
-
 
 int cmd_semls(int argc, char far *argv[])
 {
@@ -873,7 +838,6 @@ int cmd_semls(int argc, char far *argv[])
 	return 0;
 }
 
-
 int cmd_semcreate(int argc, char far *argv[])
 {
 	int	res,value;
@@ -898,7 +862,6 @@ int cmd_semcreate(int argc, char far *argv[])
 	return 0;
 }
 
-
 semid_t semid;
 
 void sem_aplic()
@@ -909,11 +872,11 @@ void sem_aplic()
 	int ini = demo_linha;
 	char str[20];
 
-	putstrxy(65,ini+0,"⁄ƒƒ Thread ƒƒƒƒø");
-	putstrxy(65,ini+1,"≥ PID  =       ≥");
-	putstrxy(65,ini+2,"≥ Execucao:    ≥");
-	putstrxy(65,ini+3,"≥              ≥");
-	putstrxy(65,ini+4,"¿ƒƒƒƒƒƒƒƒƒƒƒƒƒƒŸ");
+	putstrxy(65,ini+0,"√ö√Ñ√Ñ Thread √Ñ√Ñ√Ñ√Ñ¬ø");
+	putstrxy(65,ini+1,"¬≥ PID  =       ¬≥");
+	putstrxy(65,ini+2,"¬≥ Execucao:    ¬≥");
+	putstrxy(65,ini+3,"¬≥              ¬≥");
+	putstrxy(65,ini+4,"√Ä√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√Ñ√ô");
 
 	inttostr(str,getpid());
 	putstrxy(74,ini+1,str);
@@ -928,7 +891,6 @@ void sem_aplic()
  	}
 	exit(0);
 }
-
 
 int cmd_semtest(int argc, char far *argv[])
 {
@@ -950,7 +912,6 @@ int cmd_semtest(int argc, char far *argv[])
 	return 0;
 }
 
-
 int cmd_semup(int argc, char far *argv[])
 {
 	semid_t semid;
@@ -962,7 +923,6 @@ int cmd_semup(int argc, char far *argv[])
 	semid = atoi(argv[1]);
 	return semup(semid);
 }
-
 
 int cmd_semdestroy(int argc, char far *argv[])
 {
@@ -976,7 +936,7 @@ int cmd_semdestroy(int argc, char far *argv[])
 	return semdestroy(semid);
 }
 
-int cmd_stop(int argc, char far *argv[]){
+int cmd_stop(int argc, char far *argv[]) {
     int t=0;
     pid_t pid=0;
     if(argc<2) {
@@ -989,7 +949,7 @@ int cmd_stop(int argc, char far *argv[]){
     return t; 
 }
 
-int cmd_resume(int argc, char far *argv[]){
+int cmd_resume(int argc, char far *argv[]) {
     int t=0;
     pid_t pid=0;
     if(argc<2){
@@ -1002,167 +962,154 @@ int cmd_resume(int argc, char far *argv[]){
     return t; 
 }
 
-
-void inicializaBuffer() {
-    int i=0;
-    for (; i < tamanhoDoBuffer; i++) buffer[i] = 0;
+void sleep(int segundos) {
+	long i, j;
+    for (i = 0; i < segundos; i++) {
+        for (j = 0; j < tamSegundo; j++) {}
+    }
 }
 
-void imprimeConteudoBuffer() {
-    char str[1];
-    
-    int i = 0;
-    int x = 56;
-    int y = demo_linha + 10;
-    
-    for(;i<tamanhoDoBuffer;i++) {
-        inttostr(str, buffer[i]);
-        putstrxy(x+2+i, y+8, str);
-    }
+int avancaPosNoBuffer(int pos) {
+  return pos == tamanhoDoBuffer - 1 ? 0 : pos + 1;
+}
+
+void imprimeValoresDoBuffer() {
+	int i;
+	char str[1];
+	int x = 56, y = demo_linha + 20;
+
+	for (i = 0; i < tamanhoDoBuffer; i++) {
+		inttostr(str, buffer[i]);
+		putstrxy(x+2+i,  y+8, str);
+	}
 }
 
 void imprimeBuffer() {
-    extern int demo_linha;
-    int x = 56;
-    int y = demo_linha + 10;
-    char str[20];
-    
-    putstrxy(x, y+4, "              ");
-    putstrxy(x, y+5, "              ");
-    putstrxy(x, y+6, "   Prodcons   ");
+	extern int demo_linha;
+	int x = 56;
+	int y = demo_linha + 20;
+	char str[20];
 
-    putstrxy(x, y+7, "Tamanho do buffer:");
-    inttostr(str, tamanhoDoBuffer);
-    putstrxy(x+17, y+7, str);
-    
-    putstrxy(x, y+8, "X ");
-    imprimeConteudoBuffer();
-    putstrxy(x+20, y+8, "  X");
-    
-    inttostr(str, tempoDeProducao);
-    putstrxy(x, y+9, "Produtor:       ");
-    putstrxy(x+12, y+9, str);
-    
-    inttostr(str, tempoDeConsumo);
-    putstrxy(x, y+10, "Consumidor:       ");
-    putstrxy(x+14, y+10, str);
-    
-    putstrxy(x, y+11, " --------------- ");
+	putstrxy(x, y+6, "ProdCons");
+
+	putstrxy(x, y+7, "Tamanho Buffer: ");
+	inttostr(str, tamanhoDoBuffer);
+	putstrxy(x+17, y+7, str);
+
+	imprimeValoresDoBuffer();
+
+	inttostr(str, tempoDeProducao);
+	putstrxy(x, y+9 , "Produtor:");
+	putstrxy(x+12, y+9, str);
+
+	inttostr(str, tempoDeConsumo);
+	putstrxy(x, y+10, "Consumidor:");
+	putstrxy(x+14, y+10, str);
 }
-
-
-int incrementaPosicaoNoBuffer(pos) {
-    return pos == tamanhoDoBuffer - 1 ? 0 : pos + 1;
-}
-
-void sleep(int segundos) {
-    long i = 0;
-    long j;
-    
-    for(;i < segundos; i++) {
-        for(j=0; j < segundoDoProcessador; j++) {}
-    }
-}
-
 
 int produz(pos) {
     buffer[pos] = 1;
     imprimeBuffer();
-    return incrementaPosicaoNoBuffer(pos);
-}
-
-void produtor() {
-    int posicaoDeProducao = 0;
-    while(1) {
-        semdown(vazio);
-        semdown(mutex);
-        
-        posicaoDeProducao = produz(posicaoDeProducao);
-        
-        semup(mutex);
-        semup(cheio);
-        
-        sleep(tempoDeProducao);
-    }
-    
+    return avancaPosNoBuffer(pos);
 }
 
 int consome(pos) {
     buffer[pos] = 0;
     imprimeBuffer();
-    return incrementaPosicaoNoBuffer(pos);
+    return avancaPosNoBuffer(pos);
+}
+
+void iniciaBuffer() {
+	int i;
+	for (i = 0; i < tamanhoDoBuffer; i++) buffer[i] = 0;
+}
+
+void produtor() {
+  int pos = 0;
+  
+  while(1) {
+    semdown(vazio);
+    semdown(mutex);
+
+    pos = produz(pos);
+    
+    semup(mutex);
+    semup(cheio);
+    
+    sleep(tempoDeProducao);
+  }
 }
 
 void consumidor() {
-    int posicaoDeConsumo = 0;
-    while(1) {
-        semdown(cheio);
-        semdown(mutex);
-        
-        posicaoDeConsumo = consome(posicaoDeConsumo);
-        
-        semup(mutex);
-        semup(vazio);
-        
-        sleep(tempoDeProducao);
-    }    
+  int pos = 0;
+
+  while(1) {
+    semdown(cheio);
+    semdown(mutex);
+
+    pos = consome(pos);
+    
+    semup(mutex);
+    semup(vazio);
+
+    sleep(tempoDeConsumo);
+  }
 }
 
-int cmd_prodcons(int argc, char far *argv[])
-{
-    
-	if	(argc != 4)  {
+
+int cmd_tprod(int argc, char far *argv[]) {
+	if	(argc != 2)  {
 		putstr("Erro em prodcons: numero invalido de argumentos!\n");
 		return 1;
 	}
 	
-    tempoDeProducao = atoi(argv[1]);
-    tempoDeConsumo = atoi(argv[2]);
-    tamanhoDoBuffer = atoi(argv[3]);
-    
-    if (tamanhoDoBuffer == 0) {
-		putstr("Erro em prodcons: numero invalido de tamanho do buffer!\n");
-		return 1;
-	}
-    
-    mutex = semcreate(1);
-    vazio = semcreate(tamanhoDoBuffer);
-    cheio = semcreate(0);
-    
-    inicializaBuffer();
-    
-    imprimeBuffer();
-    
-    if (fork(produtor)==miniSO_ERROR) {
-        putstr("Erro em prodcons: erro ao criar fork!\n");
-        return 1;
-    }
-    
-    if (fork(consumidor)==miniSO_ERROR) {
-        putstr("Erro em prodcons: erro ao criar fork!\n");
-        return 1;
-    }
-    
-    sleep(tempoDeProducao);
+	tempoDeProducao = atoi(argv[1]);
 	return 0;
 }
 
-int cmd_tprod(int argc, char far *argv[]) {
-    if (argc != 2) {
-        putstr("Erro em prodcons: numero invalido de argumentos!\n");
-        return 1;
-    }
-    
-    tempoDeProducao = atoi(argv[1]); return 0;
-}
-
 int cmd_tcons(int argc, char far *argv[]) {
-    if (argc != 2) {
-        putstr("Erro em prodcons: numero invalido de argumentos!\n");
-        return 1;
-    }
-    
-    tempoDeConsumo = atoi(argv[1]); return 0;
+	if (argc != 2)  {
+		putstr("Erro em prodcons: numero invalido de argumentos!\n");
+		return 1;
+	}
+	
+	tempoDeConsumo = atoi(argv[1]);
+	return 0;
 }
 
+int cmd_prodcons(int argc, char far *argv[]) {
+	if (argc != 4) {
+	  putstr("Erro em prodcons: numero invalido de argumentos!\n");
+	  return 1;
+	} 
+  
+	tempoDeProducao = atoi(argv[1]);
+	tempoDeConsumo = atoi(argv[2]);
+	tamanhoDoBuffer = atoi(argv[3]);
+
+	mutex = semcreate(1);
+	vazio = semcreate(tamanhoDoBuffer);
+	cheio = semcreate(0);
+    
+    if (tamanhoDoBuffer == 0) {
+	  putstr("Erro em prodcons: tamanhoDoBuffer invalido!\n");
+	  return 1;
+	}
+        
+	iniciaBuffer();
+	imprimeBuffer();
+
+	if	(fork(produtor)==miniSO_ERROR) {
+		putstr("Erro em prodcons: fork() nao conseguiu criar thread!\n");
+		return 1;
+	}
+
+	if	(fork(consumidor)==miniSO_ERROR) {
+        putstr("Erro em prodcons: fork() nao conseguiu criar thread!\n");
+		return 1;
+	}
+
+	sleep(tempoDeProducao);
+	return 0;
+}
 

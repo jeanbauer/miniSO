@@ -1,0 +1,17 @@
+display_library: win32
+#display_library: x
+megs: 32
+floppya: 1_44=MINISO.IMG, status=inserted
+boot: floppy
+# Default value are sync=none, time0=local
+#clock: sync=none, time0=local
+floppy_bootsig_check: disabled=0
+log: bochsout.txt
+panic: action=ask
+error: action=report
+info: action=report
+debug: action=ignore
+debugger_log: -
+parport1: enabled=0
+mouse: enabled=0
+private_colormap: enabled=0

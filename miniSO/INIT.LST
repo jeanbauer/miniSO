@@ -1,0 +1,310 @@
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 1
+init.ASM
+
+
+
+      1				     $comm   macro   name,dist,size,count
+      2					     comm    dist name[size]:BYTE:count
+      3					     endm
+      4					     ?debug  V 300h
+      5					     ?debug  S "init.c"
+      6					     ?debug  C E92554844106696E69742E63
+      7					     ?debug  C E98FA6684B086D696E69534F2E68
+      8					     ?debug  C E9D2A4684B056C69622E68
+      9	0000			     _TEXT   segment byte public 'CODE'
+     10	0000			     _TEXT   ends
+     11				     DGROUP  group   _DATA,_BSS
+     12					     assume  cs:_TEXT,ds:DGROUP
+     13	0000			     _DATA   segment word public 'DATA'
+     14	0000			     d@	     label   byte
+     15	0000			     d@w     label   word
+     16	0000			     _DATA   ends
+     17	0000			     _BSS    segment word public 'BSS'
+     18	0000			     b@	     label   byte
+     19	0000			     b@w     label   word
+     20	0000			     _BSS    ends
+     21	0000			     _TEXT   segment byte public 'CODE'
+     22					;
+     23					;    void main()
+     24					;
+     25					     assume  cs:_TEXT
+     26	0000			     _main   proc    near
+     27	0000  55			     push    bp
+     28	0001  8B EC			     mov     bp,sp
+     29	0003  83 EC 08			     sub     sp,8
+     30	0006  56			     push    si
+     31					;
+     32					;    {
+     33					;	     unsigned val,car;
+     34					;	     void interrupt (*systemcalls)();
+     35					;	     void interrupt (*clockhandler)();
+     36					;	     int i;
+     37					;	     extern void interrupt (*miniSO_oldisr)();
+     38					;	     extern void interrupt miniSO_clockhandler();
+     39					;
+     40					;	     /*	Inicializa a pilha */
+     41					;	     init_stack(miniSO_INITSTACKS+(miniSO_STACKSIZE>>4)*(miniSO_MAXTHREADS-1-0),    +
+     42				     miniSO_STACKSIZE);
+     43					;
+     44	0007  B8 0600			     mov     ax,1536
+     45	000A  50			     push    ax
+     46	000B  B8 12A0			     mov     ax,4768
+     47	000E  50			     push    ax
+     48	000F  E8 0000e			     call    near ptr _init_stack
+     49	0012  59			     pop     cx
+     50	0013  59			     pop     cx
+     51					;
+     52					;	     /*	Inicializa o registrador DS */
+     53					;	     init_ds(miniSO_DATASEGMENT);
+     54					;
+     55	0014  B8 0B9B			     mov     ax,2971
+     56	0017  50			     push    ax
+     57	0018  E8 0000e			     call    near ptr _init_ds
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 2
+init.ASM
+
+
+
+     58	001B  59			     pop     cx
+     59					;
+     60					;	     /*	Instala	chamada	de sistemas */
+     61					;	     systemcalls = MK_FP(miniSO_CODESEGMENT,(unsigned)miniSO_systemcall);
+     62					;
+     63	001C  B8 0000e			     mov     ax,offset _miniSO_systemcall
+     64	001F  50			     push    ax
+     65	0020  B8 07E0			     mov     ax,2016
+     66	0023  50			     push    ax
+     67	0024  E8 0000e			     call    near ptr _MK_FP
+     68	0027  59			     pop     cx
+     69	0028  59			     pop     cx
+     70	0029  89 56 FE			     mov     word ptr [bp-2],dx
+     71	002C  89 46 FC			     mov     word ptr [bp-4],ax
+     72					;
+     73					;	     for     (i=0x20;i<=0xff;++i)
+     74					;
+     75	002F  BE 0020			     mov     si,32
+     76	0032  EB 0E			     jmp     short @1@114
+     77	0034			     @1@58:
+     78					;
+     79					;		     setvect(i,systemcalls);
+     80					;
+     81	0034  FF 76 FE			     push    word ptr [bp-2]
+     82	0037  FF 76 FC			     push    word ptr [bp-4]
+     83	003A  56			     push    si
+     84	003B  E8 0000e			     call    near ptr _setvect
+     85	003E  83 C4 06			     add     sp,6
+     86	0041  46			     inc     si
+     87	0042			     @1@114:
+     88	0042  81 FE 00FF		     cmp     si,255
+     89	0046  7E EC			     jle     short @1@58
+     90					;
+     91					;	     /*	Inicializa a tabela de threads */
+     92					;	     miniSO_init_proctable();
+     93					;
+     94	0048  E8 0000e			     call    near ptr _miniSO_init_proctable
+     95					;
+     96					;	     /*	Captura	interrupção original do	relógio	*/
+     97					;	     miniSO_oldisr = getvect(miniSO_CLOCKINT);
+     98					;
+     99	004B  B8 001C			     mov     ax,28
+    100	004E  50			     push    ax
+    101	004F  E8 0000e			     call    near ptr _getvect
+    102	0052  59			     pop     cx
+    103	0053  89 16 0002e		     mov     word ptr DGROUP:_miniSO_oldisr+2,dx
+    104	0057  A3 0000e			     mov     word ptr DGROUP:_miniSO_oldisr,ax
+    105					;
+    106					;	     /*	Instala	interrupção do relógio */
+    107					;	     clockhandler = MK_FP(miniSO_CODESEGMENT,(unsigned)miniSO_clockhandler);
+    108					;
+    109	005A  B8 0000e			     mov     ax,offset _miniSO_clockhandler
+    110	005D  50			     push    ax
+    111	005E  B8 07E0			     mov     ax,2016
+    112	0061  50			     push    ax
+    113	0062  E8 0000e			     call    near ptr _MK_FP
+    114	0065  59			     pop     cx
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 3
+init.ASM
+
+
+
+    115	0066  59			     pop     cx
+    116	0067  89 56 FA			     mov     word ptr [bp-6],dx
+    117	006A  89 46 F8			     mov     word ptr [bp-8],ax
+    118					;
+    119					;	     setvect(miniSO_CLOCKINT,clockhandler);
+    120					;
+    121	006D  FF 76 FA			     push    word ptr [bp-6]
+    122	0070  FF 76 F8			     push    word ptr [bp-8]
+    123	0073  B8 001C			     mov     ax,28
+    124	0076  50			     push    ax
+    125	0077  E8 0000e			     call    near ptr _setvect
+    126	007A  83 C4 06			     add     sp,6
+    127					;
+    128					;	     /*	Inicia o interpretador de comandos */
+    129					;	     command();
+    130					;
+    131	007D  E8 0000e			     call    near ptr _command
+    132					;
+    133					;	     /*	Restaura a interrupção do relógio original */
+    134					;	     setvect(miniSO_CLOCKINT,miniSO_oldisr);
+    135					;
+    136	0080  FF 36 0002e		     push    word ptr DGROUP:_miniSO_oldisr+2
+    137	0084  FF 36 0000e		     push    word ptr DGROUP:_miniSO_oldisr
+    138	0088  B8 001C			     mov     ax,28
+    139	008B  50			     push    ax
+    140	008C  E8 0000e			     call    near ptr _setvect
+    141	008F  83 C4 06			     add     sp,6
+    142					;
+    143					;	     putstr("\n\n");
+    144					;
+    145	0092  1E			     push    ds
+    146	0093  B8 0000r			     mov     ax,offset DGROUP:s@
+    147	0096  50			     push    ax
+    148	0097  E8 0000e			     call    near ptr _putstr
+    149	009A  59			     pop     cx
+    150	009B  59			     pop     cx
+    151					;
+    152					;	     putstr("minisSistema Operacional encerrado!");
+    153					;
+    154	009C  1E			     push    ds
+    155	009D  B8 0003r			     mov     ax,offset DGROUP:s@+3
+    156	00A0  50			     push    ax
+    157	00A1  E8 0000e			     call    near ptr _putstr
+    158	00A4  59			     pop     cx
+    159	00A5  59			     pop     cx
+    160					;
+    161					;	     putch('\n');
+    162					;
+    163	00A6  B8 000A			     mov     ax,10
+    164	00A9  50			     push    ax
+    165	00AA  E8 0000e			     call    near ptr _putch
+    166	00AD  59			     pop     cx
+    167					;
+    168					;	     putstr("Pressione uma tecla para reiniciar...\n");
+    169					;
+    170	00AE  1E			     push    ds
+    171	00AF  B8 0027r			     mov     ax,offset DGROUP:s@+39
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 4
+init.ASM
+
+
+
+    172	00B2  50			     push    ax
+    173	00B3  E8 0000e			     call    near ptr _putstr
+    174	00B6  59			     pop     cx
+    175	00B7  59			     pop     cx
+    176					;
+    177					;	     getch();
+    178					;
+    179	00B8  E8 0000e			     call    near ptr _getch
+    180					;
+    181					;	     /*	Reinicializa a máquina */
+    182					;	     reboot();
+    183					;
+    184	00BB  E8 0000e			     call    near ptr _reboot
+    185					;
+    186					;    }
+    187					;
+    188	00BE  5E			     pop     si
+    189	00BF  8B E5			     mov     sp,bp
+    190	00C1  5D			     pop     bp
+    191	00C2  C3			     ret
+    192	00C3			     _main   endp
+    193					     ?debug  C E9
+    194					     ?debug  C FA00000000
+    195	00C3			     _TEXT   ends
+    196	0000			     _DATA   segment word public 'DATA'
+    197	0000			     s@	     label   byte
+    198	0000  0A			     db	     10
+    199	0001  0A			     db	     10
+    200	0002  00			     db	     0
+    201	0003  6D 69 6E 69 73 53	69+	     db	     'minisSistema Operacional encerrado!'
+    202	      73 74 65 6D 61 20	4F+
+    203	      70 65 72 61 63 69	6F+
+    204	      6E 61 6C 20 65 6E	63+
+    205	      65 72 72 61 64 6F	21
+    206	0026  00			     db	     0
+    207	0027  50 72 65 73 73 69	6F+	     db	     'Pressione	uma tecla para reiniciar...'
+    208	      6E 65 20 75 6D 61	20+
+    209	      74 65 63 6C 61 20	70+
+    210	      61 72 61 20 72 65	69+
+    211	      6E 69 63 69 61 72	2E+
+    212	      2E 2E
+    213	004C  0A			     db	     10
+    214	004D  00			     db	     0
+    215	004E			     _DATA   ends
+    216	00C3			     _TEXT   segment byte public 'CODE'
+    217	00C3			     _TEXT   ends
+    218					     extrn   _miniSO_clockhandler:far
+    219					     extrn   _miniSO_oldisr:dword
+    220					     extrn   _reboot:near
+    221					     extrn   _putstr:near
+    222					     extrn   _getch:near
+    223					     extrn   _putch:near
+    224					     extrn   _miniSO_init_proctable:near
+    225					     extrn   _command:near
+    226					     public  _main
+    227					     extrn   _init_stack:near
+    228					     extrn   _init_ds:near
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 5
+init.ASM
+
+
+
+    229					     extrn   _MK_FP:near
+    230					     extrn   _getvect:near
+    231					     extrn   _setvect:near
+    232					     extrn   _miniSO_systemcall:near
+    233				     _s@     equ     s@
+    234					     end
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:18	    Page 6
+Symbol Table
+
+
+
+
+Symbol Name		Type   Value			   Cref	(defined at #)
+
+??DATE			Text   "12/06/17"
+??FILENAME		Text   "init	"
+??TIME			Text   "01:51:18"
+??VERSION		Number 030A
+@1@114			Near   _TEXT:0042		   76  #87
+@1@58			Near   _TEXT:0034		   #77	89
+@CPU			Text   0101H
+@CURSEG			Text   _TEXT			   #9  #13  #17	 #21  #196  #216
+@FILENAME		Text   INIT
+@WORDSIZE		Text   2			   #9  #13  #17	 #21  #196  #216
+B@			Byte   _BSS:0000		   #18
+B@W			Word   _BSS:0000		   #19
+D@			Byte   _DATA:0000		   #14
+D@W			Word   _DATA:0000		   #15
+S@			Byte   _DATA:0000		   146	155  171  #197
+_COMMAND		Near   ----:---- Extern		   131	#225
+_GETCH			Near   ----:---- Extern		   179	#222
+_GETVECT		Near   ----:---- Extern		   101	#230
+_INIT_DS		Near   ----:---- Extern		   57  #228
+_INIT_STACK		Near   ----:---- Extern		   48  #227
+_MAIN			Near   _TEXT:0000		   #26	226
+_MINISO_CLOCKHANDLER	Far    ----:---- Extern		   109	#218
+_MINISO_INIT_PROCTABLE	Near   ----:---- Extern		   94  #224
+_MINISO_OLDISR		Dword  ----:---- Extern		   103	104  136  137  #219
+_MINISO_SYSTEMCALL	Near   ----:---- Extern		   63  #232
+_MK_FP			Near   ----:---- Extern		   67  113  #229
+_PUTCH			Near   ----:---- Extern		   165	#223
+_PUTSTR			Near   ----:---- Extern		   148	157  173  #221
+_REBOOT			Near   ----:---- Extern		   184	#220
+_S@			Alias  S@			   #233
+_SETVECT		Near   ----:---- Extern		   84  125  140	 #231
+
+Macro Name						   Cref	(defined at #)
+
+$COMM							   #1
+
+Groups & Segments	Bit Size Align	Combine	Class	   Cref	(defined at #)
+
+DGROUP			Group				   #11	12  103	 104  136  137	146  155  171
+  _BSS			16  0000 Word	Public	BSS	   11  #17
+  _DATA			16  004E Word	Public	DATA	   11  #13  #196
+_TEXT			16  00C3 Byte	Public	CODE	   #9  12  #21	25  #216
+

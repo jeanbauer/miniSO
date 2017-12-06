@@ -1,0 +1,590 @@
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 1
+miniSO.ASM
+
+
+
+      1				      ;
+      2				      ;	Universidade Luterana do Brasil
+      3				      ;	Curso de Bacharelado em	Ciência	da Computação
+      4				      ;	Disciplina: Projeto de Sistemas	Operacionais
+      5				      ;	Professor: Roland Teodorowitsch
+      6				      ;
+      7				      ;	Arquivo: scall.asm
+      8				      ;	Assunto: Implementação do ponto	de entrada de chamadas de sistema:
+      9				      ;		 void miniSO_systemcall	 (void);
+     10				      ;		 Esta função recebe o número do	serviço	em AH e	retorna	com a instrução	IRET
+     11				      ;
+     12
+     13
+     14	0000			     _TEXT   segment byte public 'CODE'
+     15
+     16					     assume  cs:_TEXT
+     17
+     18
+     19	0000			     _miniSO_systemcall	     proc    near
+     20	0000  FB			     sti
+     21	0001  52			     push    dx
+     22	0002  51			     push    cx
+     23	0003  53			     push    bx
+     24	0004  8A C4			     mov     al,ah
+     25	0006  32 E4			     xor     ah,ah
+     26	0008  50			     push    ax
+     27	0009  E8 0000e			     call    near ptr _scall
+     28	000C  83 C4 08			     add     sp,8
+     29	000F  CF			     iret
+     30	0010			     _miniSO_systemcall	     endp
+     31
+     32
+     33	0010			     _miniSO_clockhandler    proc    near
+     34	0010  50			     push    ax
+     35	0011  53			     push    bx
+     36	0012  51			     push    cx
+     37	0013  52			     push    dx
+     38	0014  06			     push    es
+     39	0015  1E			     push    ds
+     40	0016  56			     push    si
+     41	0017  57			     push    di
+     42	0018  55			     push    bp
+     43	0019  BD 0B9B			     mov     bp,miniSO_DATASEGMENT
+     44	001C  8E DD			     mov     ds,bp
+     45				     ;	      mov     bp,sp
+     46	001E  E8 0000e			     call    near ptr _miniSO_contextswitch
+     47	0021			     _miniSO_return_addr:
+     48	0021  BA 0020			     mov     dx,0020h
+     49	0024  B0 20			     mov     al,20h
+     50	0026  EE			     out     dx,al
+     51	0027  5D			     pop     bp
+     52	0028  5F			     pop     di
+     53	0029  5E			     pop     si
+     54	002A  1F			     pop     ds
+     55	002B  07			     pop     es
+     56	002C  5A			     pop     dx
+     57	002D  59			     pop     cx
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 2
+miniSO.ASM
+
+
+
+     58	002E  5B			     pop     bx
+     59	002F  58			     pop     ax
+     60	0030  CF			     iret
+     61	0031			     _miniSO_clockhandler    endp
+     62
+     63
+     64	0031			     _setvect	     proc    near
+     65					     ; void setvect  (unsigned num,unsigned seg, unsigned des);
+     66					     ; Esta função recebe o número da interrupção e o endereço	(segmento
+     67					     ; e deslocamento) de uma função, e	define esta função como	rotina de
+     68					     ; atendimento desta interrupção.
+     69					     ; [BP+8]  -  segmento da rotina de	atendimento
+     70					     ; [BP+6]  -  deslocamento da rotina de atendimento
+     71					     ; [BP+4]  -  número da interrupção
+     72					     ; Salva BP	e faz BP apontar para a	pilha
+     73	0031  55			     push    bp
+     74	0032  8B EC			     mov     bp,sp
+     75
+     76					     ; Salva SI	e AX
+     77	0034  56			     push    si
+     78	0035  50			     push    ax
+     79
+     80					     ; AX recebe o número da interrupção
+     81	0036  8B 46 04			     mov     ax,word ptr [bp+4]
+     82					     ; "Multiplica" AX por 4
+     83	0039  D1 E0 D1 E0		     shl     ax,2
+     84					     ; SI recebe o endereço do vetor de	interrupção
+     85	003D  8B F0			     mov     si,ax
+     86
+     87					     ; Desabilita interrupções
+     88	003F  FA			     cli
+     89
+     90					     ; Salva DS	original
+     91	0040  1E			     push     ds
+     92
+     93					     ; Atribui 0 para DS
+     94	0041  33 C0			     xor      ax,ax
+     95	0043  8E D8			     mov      ds,ax
+     96
+     97					     ; Define o	deslocamento no	vetor de interrupção
+     98	0045  8B 46 06			     mov     ax,word ptr [bp+6]
+     99	0048  89 04			     mov     word ptr [si],ax
+    100
+    101					     ; Incrementa SI
+    102	004A  83 C6 02			     add     si,2
+    103
+    104					     ; Define o	segmento no vetor de interrupção
+    105	004D  8B 46 08			     mov     ax,word ptr [bp+8]
+    106	0050  89 04			     mov     word ptr [si],ax
+    107
+    108					     ; Restaura	valor de DS
+    109	0052  1F			     pop     ds
+    110
+    111					     ; Habilita	interrupções
+    112	0053  FB			     sti
+    113
+    114					     ; Restaura	AX e SI
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 3
+miniSO.ASM
+
+
+
+    115	0054  58			     pop     ax
+    116	0055  5E			     pop     si
+    117
+    118					     ; Restaura	BP
+    119	0056  5D			     pop     bp
+    120
+    121					     ; Retorna da função
+    122	0057  C3			     ret
+    123
+    124	0058			     _setvect	     endp
+    125
+    126
+    127	0058			     _getvect	     proc    near
+    128					     ; [BP+4]  -  número da interrupção
+    129					     ; Salva BP	e faz BP apontar para a	pilha
+    130	0058  55			     push    bp
+    131	0059  8B EC			     mov     bp,sp
+    132
+    133					     ; Restaura	BP
+    134	005B  5D			     pop     bp
+    135
+    136					     ; Salva SI
+    137	005C  56			     push    si
+    138
+    139					     ; AX recebe o número da interrupção
+    140	005D  8B 46 04			     mov     ax,word ptr [bp+4]
+    141					     ; "Multiplica" AX por 4
+    142	0060  D1 E0 D1 E0		     shl     ax,2
+    143					     ; SI recebe o endereço do vetor de	interrupção
+    144	0064  8B F0			     mov     si,ax
+    145
+    146					     ; Salva DS	original
+    147	0066  1E			     push     ds
+    148
+    149					     ; Atribui 0 para DS
+    150	0067  33 C0			     xor      ax,ax
+    151	0069  8E D8			     mov      ds,ax
+    152
+    153					     ; Define o	deslocamento no	vetor de interrupção
+    154	006B  8B 04			     mov     ax,word ptr [si]
+    155
+    156					     ; Incrementa SI
+    157	006D  83 C6 02			     add     si,2
+    158
+    159					     ; Define o	segmento no vetor de interrupção
+    160	0070  8B 14			     mov     dx,word ptr [si]
+    161
+    162					     ; Restaura	valor de DS
+    163	0072  1F			     pop     ds
+    164
+    165					     ; Restaura	SI
+    166	0073  5E			     pop     si
+    167
+    168					     ; Retorna da função
+    169	0074  C3			     ret
+    170
+    171	0075			     _getvect	     endp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 4
+miniSO.ASM
+
+
+
+    172
+    173
+    174	0075			     _enable proc    near
+    175	0075  FB			     sti
+    176	0076  C3			     ret
+    177	0077			     _enable endp
+    178
+    179
+    180	0077			     _disable	     proc    near
+    181	0077  FA			     cli
+    182	0078  C3			     ret
+    183	0079			     _disable	     endp
+    184
+    185
+    186	0079			     _MK_FP  proc    near
+    187					     ; [bp+6] =	deslocamento
+    188					     ; [bp+4] =	segmento
+    189					     ; [bp+2] =	IP
+    190					     ; [bp+0] =	BP
+    191	0079  55			     push    bp
+    192	007A  8B EC			     mov     bp,sp
+    193					     ; retira os valores da pilha
+    194	007C  8B 46 06			     mov     ax,[bp+6] ; deslocamento
+    195	007F  8B 56 04			     mov     dx,[bp+4] ; segmento
+    196					     ; retira bp da pilha e retorna
+    197	0082  5D			     pop     bp
+    198	0083  C3			     ret
+    199	0084			     _MK_FP  endp
+    200
+    201
+    202	0084			     _FP_SEG proc    near
+    203					     ; [bp+6] =	segmento
+    204					     ; [bp+4] =	deslocamento
+    205					     ; [bp+2] =	IP
+    206					     ; [bp+0] =	BP
+    207	0084  55			     push    bp
+    208	0085  8B EC			     mov     bp,sp
+    209					     ; retira os valores da pilha
+    210	0087  8B 46 06			     mov     ax,[bp+6]
+    211					     ; retira bp da pilha e retorna
+    212	008A  5D			     pop     bp
+    213	008B  C3			     ret
+    214	008C			     _FP_SEG endp
+    215
+    216
+    217	008C			     _FP_OFF proc    near
+    218					     ; [bp+6] =	segmento
+    219					     ; [bp+4] =	deslocamento
+    220					     ; [bp+2] =	IP
+    221					     ; [bp+0] =	BP
+    222	008C  55			     push    bp
+    223	008D  8B EC			     mov     bp,sp
+    224					     ; retira os valores da pilha
+    225	008F  8B 46 04			     mov     ax,[bp+4]
+    226					     ; retira bp da pilha e retorna
+    227	0092  5D			     pop     bp
+    228	0093  C3			     ret
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 5
+miniSO.ASM
+
+
+
+    229	0094			     _FP_OFF endp
+    230
+    231
+    232	0094			     _init_ds	     proc    near
+    233
+    234	0094  55			     push    bp
+    235	0095  8B EC			     mov     bp,sp
+    236	0097  8B 46 04			     mov     ax,word ptr [bp+4]
+    237	009A  8E D8			     mov     ds,ax
+    238	009C  5D			     pop     bp
+    239	009D  C3			     ret
+    240
+    241	009E			     _init_ds	     endp
+    242
+    243
+    244	009E			     _init_stack     proc    near
+    245					     ; [bp+6] =	SP
+    246					     ; [bp+4] =	SS
+    247					     ; [bp+2] =	IP
+    248					     ; [bp+0] =	BP
+    249	009E  55			     push    bp
+    250	009F  8B EC			     mov     bp,sp
+    251					     ; retira os valores da pilha
+    252	00A1  8B 46 06			     mov     ax,[bp+6]
+    253	00A4  8B 5E 04			     mov     bx,[bp+4]
+    254	00A7  8B 4E 02			     mov     cx,[bp+2]
+    255	00AA  8B 56 00			     mov     dx,[bp]
+    256					     ; desabilita as interrupções
+    257	00AD  FA			     cli
+    258					     ; define a	nova pilha
+    259	00AE  8E D3			     mov     ss,bx
+    260	00B0  8B E0			     mov     sp,ax
+    261					     ; coloca os valores na nova pilha
+    262	00B2  50			     push    ax
+    263	00B3  53			     push    bx
+    264	00B4  51			     push    cx
+    265	00B5  52			     push    dx
+    266					     ; habilita	as interrupções
+    267	00B6  FB			     sti
+    268					     ; retira bp da pilha e retorna
+    269	00B7  5D			     pop     bp
+    270	00B8  C3			     ret
+    271	00B9			     _init_stack     endp
+    272
+    273
+    274	00B9			     N_LXMUL@	     proc    far
+    275	00B9  A3 0000r				     mov    ds:[miniSO_aux],ax
+    276	00BC  58				     pop    ax
+    277	00BD  0E				     push   cs
+    278	00BE  50				     push   ax
+    279	00BF  A1 0000r				     mov    ax,ds:[miniSO_aux]
+    280	00C2			     N_LXMUL@	     endp
+    281
+    282	00C2			     LXMUL@	     proc    far
+    283	00C2  56				     push   si
+    284	00C3  96				     xchg   si,ax
+    285	00C4  92				     xchg   dx,ax
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 6
+miniSO.ASM
+
+
+
+    286	00C5  85 C0				     test   ax,ax
+    287	00C7  74 02				     je	    LXMUL1
+    288	00C9  F7 E3				     mul    bx
+    289	00CB  E3 05		     LXMUL1:	     jcxz   LXMUL2
+    290	00CD  91				     xchg   cx,ax
+    291	00CE  F7 E6				     mul    si
+    292	00D0  03 C1				     add    ax,cx
+    293	00D2  96		     LXMUL2:	     xchg   si,ax
+    294	00D3  F7 E3				     mul    bx
+    295	00D5  03 D6				     add    dx,si
+    296	00D7  5E				     pop    si
+    297	00D8  CB				     retf
+    298	00D9			     LXMUL@	     endp
+    299
+    300
+    301	00D9			     N_LDIV@	     proc    far
+    302	00D9  59				     pop    cx
+    303	00DA  0E				     push   cs
+    304	00DB  51				     push   cx
+    305	00DC			     N_LDIV@	     endp
+    306
+    307	00DC			     LDIV@	     proc    far
+    308	00DC  33 C9				     xor    cx,cx
+    309	00DE  EB 19 90				     jmp    LUMOD1
+    310	00E1			     LDIV@	     endp
+    311
+    312	00E1			     N_LUDIV@	     proc    far
+    313	00E1  59				     pop    cx
+    314	00E2  0E				     push   cs
+    315	00E3  51				     push   cx
+    316	00E4			     N_LUDIV@	     endp
+    317
+    318	00E4			     LUDIV@	     proc    far
+    319	00E4  B9 0001				     mov    cx,0001h
+    320	00E7  EB 10 90				     jmp    LUMOD1
+    321	00EA			     LUDIV@	     endp
+    322
+    323	00EA			     N_LMOD@	     proc    far
+    324	00EA  59				     pop    cx
+    325	00EB  0E				     push   cs
+    326	00EC  51				     push   cx
+    327	00ED			     N_LMOD@	     endp
+    328
+    329	00ED			     LMOD@	     proc    far
+    330	00ED  B9 0002				     mov    cx,0002h
+    331	00F0  EB 07 90				     jmp    LUMOD1
+    332	00F3			     LMOD@	     endp
+    333
+    334	00F3			     N_LUMOD@	     proc    far
+    335	00F3  59				     pop    cx
+    336	00F4  0E				     push   cs
+    337	00F5  51				     push   cx
+    338	00F6			     N_LUMOD@	     endp
+    339
+    340	00F6			     LUMOD@	     proc    far
+    341	00F6  B9 0003				     mov    cx,0003h
+    342	00F9  55		     LUMOD1:	     push   bp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 7
+miniSO.ASM
+
+
+
+    343	00FA  56				     push   si
+    344	00FB  57				     push   di
+    345	00FC  8B EC				     mov    bp,sp
+    346	00FE  8B F9				     mov    di,cx
+    347	0100  8B 46 0A				     mov    ax,[bp+0Ah]
+    348	0103  8B 56 0C				     mov    dx,[bp+0Ch]
+    349	0106  8B 5E 0E				     mov    bx,[bp+0Eh]
+    350	0109  8B 4E 10				     mov    cx,[bp+10h]
+    351	010C  0B C9				     or	    cx,cx
+    352	010E  75 08				     jne    LUMOD2
+    353	0110  0B D2				     or	    dx,dx
+    354	0112  74 69				     je	    LUMOD3
+    355	0114  0B DB				     or	    bx,bx
+    356	0116  74 65				     je	    LUMOD3
+    357	0118  F7 C7 0001	     LUMOD2:	     test   di,0001
+    358	011C  75 1C				     jne    LUMOD4
+    359	011E  0B D2				     or	    dx,dx
+    360	0120  79 0A				     jns    LUMOD5
+    361	0122  F7 DA				     neg    dx
+    362	0124  F7 D8				     neg    ax
+    363	0126  83 DA 00				     sbb    dx,0000h
+    364	0129  83 CF 0C				     or	    di,000Ch
+    365	012C  0B C9		     LUMOD5:	     or	    cx,cx
+    366	012E  79 0A				     jns    LUMOD4
+    367	0130  F7 D9				     neg    cx
+    368	0132  F7 DB				     neg    bx
+    369	0134  83 D9 00				     sbb    cx,0000h
+    370	0137  83 F7 04				     xor    di,0004h
+    371	013A  8B E9		     LUMOD4:	     mov    bp,cx
+    372	013C  B9 0020				     mov    cx,0020h
+    373	013F  57				     push   di
+    374	0140  33 FF				     xor    di,di
+    375	0142  33 F6				     xor    si,si
+    376	0144  D1 E0		     LUMOD8:	     shl    ax,1
+    377	0146  D1 D2				     rcl    dx,1
+    378	0148  D1 D6				     rcl    si,1
+    379	014A  D1 D7				     rcl    di,1
+    380	014C  3B FD				     cmp    di,bp
+    381	014E  72 0B				     jb	    LUMOD6
+    382	0150  77 04				     ja	    LUMOD7
+    383	0152  3B F3				     cmp    si,bx
+    384	0154  72 05				     jb	    LUMOD6
+    385	0156  2B F3		     LUMOD7:	     sub    si,bx
+    386	0158  1B FD				     sbb    di,bp
+    387	015A  40				     inc    ax
+    388	015B  E2 E7		     LUMOD6:	     loop   LUMOD8
+    389	015D  5B				     pop    bx
+    390	015E  F7 C3 0002			     test   bx,0002h
+    391	0162  74 06				     je	    LUMOD9
+    392	0164  8B C6				     mov    ax,si
+    393	0166  8B D7				     mov    dx,di
+    394	0168  D1 EB				     shr    bx,1
+    395	016A  F7 C3 0004	     LUMOD9:	     test   bx,0004h
+    396	016E  74 07				     je	    LUMODA
+    397	0170  F7 DA				     neg    dx
+    398	0172  F7 D8				     neg    ax
+    399	0174  83 DA 00				     sbb    dx,0000h
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 8
+miniSO.ASM
+
+
+
+    400	0177  5F		     LUMODA:	     pop    di
+    401	0178  5E				     pop    si
+    402	0179  5D				     pop    bp
+    403	017A  CA 0008				     retf   0008h
+    404	017D  F7 F3		     LUMOD3:	     div    bx
+    405	017F  F7 C7 0002			     test   di,0002h
+    406	0183  74 01				     je	    LUMODB
+    407	0185  92				     xchg   dx,ax
+    408	0186  33 D2		     LUMODB:	     xor    dx,dx
+    409	0188  EB ED				     jmp    LUMODA
+    410	018A			     LUMOD@	     endp
+    411
+    412
+    413	018A			     N_LXLSH@	     proc    far
+    414	018A  5B				     pop    bx
+    415	018B  0E				     push   cs
+    416	018C  53				     push   bx
+    417	018D			     N_LXLSH@	     endp
+    418
+    419	018D			     LXLSH@	     proc    far
+    420	018D  80 F9 10				     cmp    cl,10h
+    421	0190  73 10				     jnb    LXLSH1
+    422	0192  8B D8				     mov    bx,ax
+    423	0194  D3 E0				     shl    ax,cl
+    424	0196  D3 E2				     shl    dx,cl
+    425	0198  F6 D9				     neg    cl
+    426	019A  80 C1 10				     add    cl,10h
+    427	019D  D3 EB				     shr    bx,cl
+    428	019F  0B D3				     or	    dx,bx
+    429	01A1  CB				     retf
+    430	01A2  80 E9 10		     LXLSH1:	     sub    cl,10h
+    431	01A5  92				     xchg   dx,ax
+    432	01A6  33 C0				     xor    ax,ax
+    433	01A8  D3 E2				     shl    dx,cl
+    434	01AA  CB				     retf
+    435	01AB			     LXLSH@	     endp
+    436
+    437
+    438	01AB			     _TEXT   ends
+    439
+    440
+    441	0000			     _DATA   segment word public 'DATA'
+    442
+    443	0000  0000		     miniSO_aux	     dw	     0000h   ; auxiliar	para armazenar valor da	pilha
+    444
+    445	0002			     _DATA   ends
+    446
+    447					     extrn  _miniSO_contextswitch
+    448					     extrn   _scall:near
+    449
+    450					     public  _miniSO_systemcall
+    451					     public  _miniSO_clockhandler
+    452					     public  _miniSO_return_addr
+    453					     public  _setvect
+    454					     public  _getvect
+    455					     public  _enable
+    456					     public  _disable
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 9
+miniSO.ASM
+
+
+
+    457					     public  _MK_FP
+    458					     public  _FP_SEG
+    459					     public  _FP_OFF
+    460					     public  _init_ds
+    461					     public  _init_stack
+    462
+    463					     public  N_LXMUL@
+    464					     public  LXMUL@
+    465					     public  N_LDIV@
+    466					     public  LDIV@
+    467					     public  N_LUDIV@
+    468					     public  LUDIV@
+    469					     public  N_LMOD@
+    470					     public  LMOD@
+    471					     public  N_LUMOD@
+    472					     public  LUMOD@
+    473					     public  N_LXLSH@
+    474					     public  LXLSH@
+    475
+    476					     end
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 10
+Symbol Table
+
+
+
+
+Symbol Name		Type   Value			   Cref	(defined at #)
+
+??DATE			Text   "12/06/17"
+??FILENAME		Text   "miniSO	"
+??TIME			Text   "01:51:26"
+??VERSION		Number 030A
+@CPU			Text   0101H
+@CURSEG			Text   _DATA			   #14	#441
+@FILENAME		Text   MINISO
+@WORDSIZE		Text   2			   #14	#441
+LDIV@			Far    _TEXT:00DC		   #307	 466
+LMOD@			Far    _TEXT:00ED		   #329	 470
+LUDIV@			Far    _TEXT:00E4		   #318	 468
+LUMOD1			Near   _TEXT:00F9		   309	320  331  #342
+LUMOD2			Near   _TEXT:0118		   352	#357
+LUMOD3			Near   _TEXT:017D		   354	356  #404
+LUMOD4			Near   _TEXT:013A		   358	366  #371
+LUMOD5			Near   _TEXT:012C		   360	#365
+LUMOD6			Near   _TEXT:015B		   381	384  #388
+LUMOD7			Near   _TEXT:0156		   382	#385
+LUMOD8			Near   _TEXT:0144		   #376	 388
+LUMOD9			Near   _TEXT:016A		   391	#395
+LUMOD@			Far    _TEXT:00F6		   #340	 472
+LUMODA			Near   _TEXT:0177		   396	#400  409
+LUMODB			Near   _TEXT:0186		   406	#408
+LXLSH1			Near   _TEXT:01A2		   421	#430
+LXLSH@			Far    _TEXT:018D		   #419	 474
+LXMUL1			Near   _TEXT:00CB		   287	#289
+LXMUL2			Near   _TEXT:00D2		   289	#293
+LXMUL@			Far    _TEXT:00C2		   #282	 464
+MINISO_AUX		Word   _DATA:0000		   275	279  #443
+MINISO_DATASEGMENT	Text   07e0h+03BBh		   43
+N_LDIV@			Far    _TEXT:00D9		   #301	 465
+N_LMOD@			Far    _TEXT:00EA		   #323	 469
+N_LUDIV@		Far    _TEXT:00E1		   #312	 467
+N_LUMOD@		Far    _TEXT:00F3		   #334	 471
+N_LXLSH@		Far    _TEXT:018A		   #413	 473
+N_LXMUL@		Far    _TEXT:00B9		   #274	 463
+_DISABLE		Near   _TEXT:0077		   #180	 456
+_ENABLE			Near   _TEXT:0075		   #174	 455
+_FP_OFF			Near   _TEXT:008C		   #217	 459
+_FP_SEG			Near   _TEXT:0084		   #202	 458
+_GETVECT		Near   _TEXT:0058		   #127	 454
+_INIT_DS		Near   _TEXT:0094		   #232	 460
+_INIT_STACK		Near   _TEXT:009E		   #244	 461
+_MINISO_CLOCKHANDLER	Near   _TEXT:0010		   #33	451
+_MINISO_CONTEXTSWITCH	Word   ----:---- Extern		   46  #447
+_MINISO_RETURN_ADDR	Near   _TEXT:0021		   #47	452
+_MINISO_SYSTEMCALL	Near   _TEXT:0000		   #19	450
+_MK_FP			Near   _TEXT:0079		   #186	 457
+_SCALL			Near   ----:---- Extern		   27  #448
+_SETVECT		Near   _TEXT:0031		   #64	453
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:27	    Page 11
+Symbol Table
+
+
+
+
+Groups & Segments	Bit Size Align	Combine	Class	   Cref	(defined at #)
+
+_DATA			16  0002 Word	Public	DATA	   #441
+_TEXT			16  01AB Byte	Public	CODE	   #14	16
+

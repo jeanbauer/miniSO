@@ -1,0 +1,7 @@
+# ----- Variaveis --------------------------------
+# Deslocamento ate o inicio do segmento de dados (hexadecimal)
+DATA    = 03BB
+# Segmento de codigo onde a imagem do miniSO sera colocada (hexadecimal)
+CODE    = 07e0
+# Versao do miniSO
+VERSION = 2017

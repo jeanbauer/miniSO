@@ -1,0 +1,12 @@
+boot(size=512,signature=0xaa55,segment=0x07c0)
+{
+  fat(oem="miniSO",volume="BOOTDISK",disk=FD1440);
+  setstack(0x0000,0x7c00);
+  setcolor(0x07);
+  putstr("Carregando minisSistema Operacional...");
+  readdisk_chs(0x00,0,1,16,3,0x07e0,0x0000);
+  readdisk_chs(0x00,1,0,1,18,0x0840,0x0000);
+  readdisk_chs(0x00,1,1,1,18,0x0a80,0x0000);
+  readdisk_chs(0x00,2,0,1,18,0x0cc0,0x0000);
+  jump(0x07e0,0x0000);
+}

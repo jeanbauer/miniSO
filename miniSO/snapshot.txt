@@ -1,0 +1,25 @@
+semtest <semid>     aplicacao para teste de semaforos
+semup <semid>       incrementa o valor de um semaforo
+semdestroy <semid>  destroi um semaforo
+miniSO> time
+21:35:21
+miniSO> time
+21:35:23
+miniSO> time
+21:35:25
+miniSO> ps
+ BCP   PID   PPID  STATUS   WAIT   ZLIST  PREV   NEXT
+  0      0     -1  RUNNING     -1     -1     0      0
+miniSO> ps
+ BCP   PID   PPID  STATUS   WAIT   ZLIST  PREV   NEXT
+  0      0     -1  RUNNING     -1     -1     0      0
+miniSO> ps
+ BCP   PID   PPID  STATUS   WAIT   ZLIST  PREV   NEXT
+  0      0     -1  RUNNING     -1     -1     0      0
+miniSO> ps
+ BCP   PID   PPID  STATUS   WAIT   ZLIST  PREV   NEXT
+  0      0     -1  RUNNING     -1     -1     0      0
+miniSO> ps
+ BCP   PID   PPID  STATUS   WAIT   ZLIST  PREV   NEXT
+  0      0     -1  RUNNING     -1     -1     0      0
+miniSO> ß

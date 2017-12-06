@@ -1,0 +1,2876 @@
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 1
+lib.ASM
+
+
+
+      1				     $comm   macro   name,dist,size,count
+      2					     comm    dist name[size]:BYTE:count
+      3					     endm
+      4					     ?debug  V 300h
+      5					     ?debug  S "lib.c"
+      6					     ?debug  C E98AA5684B056C69622E63
+      7					     ?debug  C E98FA6684B086D696E69534F2E68
+      8					     ?debug  C E9D2A4684B056C69622E68
+      9					     ?debug  C E9FBA5684B077363616C6C2E68
+     10	0000			     _TEXT   segment byte public 'CODE'
+     11	0000			     _TEXT   ends
+     12				     DGROUP  group   _DATA,_BSS
+     13					     assume  cs:_TEXT,ds:DGROUP
+     14	0000			     _DATA   segment word public 'DATA'
+     15	0000			     d@	     label   byte
+     16	0000			     d@w     label   word
+     17	0000			     _DATA   ends
+     18	0000			     _BSS    segment word public 'BSS'
+     19	0000			     b@	     label   byte
+     20	0000			     b@w     label   word
+     21	0000			     _BSS    ends
+     22	0000			     _TEXT   segment byte public 'CODE'
+     23					;
+     24					;    void putch(int car)
+     25					;
+     26					     assume  cs:_TEXT
+     27	0000			     _putch  proc    near
+     28	0000  55			     push    bp
+     29	0001  8B EC			     mov     bp,sp
+     30					;
+     31					;    {
+     32					;      _BX = car;
+     33					;
+     34	0003  8B 5E 04			     mov     bx,word ptr [bp+4]
+     35					;
+     36					;      asm {
+     37					;	  mov  ah,SC_PUTCH
+     38					;
+     39	0006  B4 00			     mov       ah,0
+     40					;
+     41					;	  int  22h
+     42					;
+     43	0008  CD 22			     int       22h
+     44					;
+     45					;      }
+     46					;    }
+     47					;
+     48	000A  5D			     pop     bp
+     49	000B  C3			     ret
+     50	000C			     _putch  endp
+     51					;
+     52					;    int getch()
+     53					;
+     54					     assume  cs:_TEXT
+     55	000C			     _getch  proc    near
+     56	000C  55			     push    bp
+     57	000D  8B EC			     mov     bp,sp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 2
+lib.ASM
+
+
+
+     58					;
+     59					;    {
+     60					;      asm {
+     61					;	 mov  ah,SC_GETCH
+     62					;
+     63	000F  B4 01			     mov       ah,1
+     64					;
+     65					;	 int  22h
+     66					;
+     67	0011  CD 22			     int       22h
+     68					;
+     69					;      }
+     70					;      return (_AX);
+     71					;
+     72	0013  EB 00			     jmp     short @2@114
+     73	0015			     @2@114:
+     74					;
+     75					;    }
+     76					;
+     77	0015  5D			     pop     bp
+     78	0016  C3			     ret
+     79	0017			     _getch  endp
+     80					;
+     81					;    void clrscr()
+     82					;
+     83					     assume  cs:_TEXT
+     84	0017			     _clrscr proc    near
+     85	0017  55			     push    bp
+     86	0018  8B EC			     mov     bp,sp
+     87					;
+     88					;    {
+     89					;      asm {
+     90					;	 mov  ah,SC_CLRSCR
+     91					;
+     92	001A  B4 02			     mov       ah,2
+     93					;
+     94					;	 int  22h
+     95					;
+     96	001C  CD 22			     int       22h
+     97					;
+     98					;      }
+     99					;    }
+    100					;
+    101	001E  5D			     pop     bp
+    102	001F  C3			     ret
+    103	0020			     _clrscr endp
+    104					;
+    105					;    void putstr (char far *str)
+    106					;
+    107					     assume  cs:_TEXT
+    108	0020			     _putstr proc    near
+    109	0020  55			     push    bp
+    110	0021  8B EC			     mov     bp,sp
+    111	0023  EB 0F			     jmp     short @4@86
+    112	0025			     @4@58:
+    113					;
+    114					;    {
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 3
+lib.ASM
+
+
+
+    115					;      while (*str!='\0')
+    116					;	     putch(*str++);
+    117					;
+    118	0025  C4 5E 04			     les     bx,dword ptr [bp+4]
+    119	0028  FF 46 04			     inc     word ptr [bp+4]
+    120	002B  26: 8A 07			     mov     al,byte ptr es:[bx]
+    121	002E  98			     cbw
+    122	002F  50			     push    ax
+    123	0030  E8 FFCD			     call    near ptr _putch
+    124	0033  59			     pop     cx
+    125	0034			     @4@86:
+    126	0034  C4 5E 04			     les     bx,dword ptr [bp+4]
+    127	0037  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    128	003B  75 E8			     jne     short @4@58
+    129					;
+    130					;    }
+    131					;
+    132	003D  5D			     pop     bp
+    133	003E  C3			     ret
+    134	003F			     _putstr endp
+    135					;
+    136					;    void putstrxy (int	x, int y, char far *string)
+    137					;
+    138					     assume  cs:_TEXT
+    139	003F			     _putstrxy	     proc    near
+    140	003F  55			     push    bp
+    141	0040  8B EC			     mov     bp,sp
+    142	0042  83 EC 04			     sub     sp,4
+    143					;
+    144					;    {
+    145					;      char far	*pv;
+    146					;
+    147					;      pv=(char	far *)(0xB8000000L+(y-1)*160+(x-1)*2);
+    148					;
+    149	0045  8B 46 06			     mov     ax,word ptr [bp+6]
+    150	0048  48			     dec     ax
+    151	0049  BA 00A0			     mov     dx,160
+    152	004C  F7 EA			     imul    dx
+    153	004E  99			     cwd
+    154	004F  50			     push    ax
+    155	0050  8B 46 04			     mov     ax,word ptr [bp+4]
+    156	0053  48			     dec     ax
+    157	0054  D1 E0			     shl     ax,1
+    158	0056  52			     push    dx
+    159	0057  99			     cwd
+    160	0058  5B			     pop     bx
+    161	0059  59			     pop     cx
+    162	005A  03 C8			     add     cx,ax
+    163	005C  13 DA			     adc     bx,dx
+    164	005E  83 C1 00			     add     cx,0
+    165	0061  81 D3 B800		     adc     bx,-18432
+    166	0065  89 5E FE			     mov     word ptr [bp-2],bx
+    167	0068  89 4E FC			     mov     word ptr [bp-4],cx
+    168	006B  EB 15			     jmp     short @5@86
+    169	006D			     @5@58:
+    170					;
+    171					;      while (*string != '\0')	{
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 4
+lib.ASM
+
+
+
+    172					;	     *pv++=*string++;
+    173					;
+    174	006D  C4 5E 08			     les     bx,dword ptr [bp+8]
+    175	0070  26: 8A 07			     mov     al,byte ptr es:[bx]
+    176	0073  C4 5E FC			     les     bx,dword ptr [bp-4]
+    177	0076  26: 88 07			     mov     byte ptr es:[bx],al
+    178	0079  FF 46 08			     inc     word ptr [bp+8]
+    179	007C  FF 46 FC			     inc     word ptr [bp-4]
+    180					;
+    181					;	     pv++;
+    182					;
+    183	007F  FF 46 FC			     inc     word ptr [bp-4]
+    184	0082			     @5@86:
+    185	0082  C4 5E 08			     les     bx,dword ptr [bp+8]
+    186	0085  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    187	0089  75 E2			     jne     short @5@58
+    188					;
+    189					;      }
+    190					;    }
+    191					;
+    192	008B  8B E5			     mov     sp,bp
+    193	008D  5D			     pop     bp
+    194	008E  C3			     ret
+    195	008F			     _putstrxy	     endp
+    196					;
+    197					;    int getcolor ()
+    198					;
+    199					     assume  cs:_TEXT
+    200	008F			     _getcolor	     proc    near
+    201	008F  55			     push    bp
+    202	0090  8B EC			     mov     bp,sp
+    203					;
+    204					;    {
+    205					;      asm {
+    206					;	 mov ah,SC_GETCOLOR
+    207					;
+    208	0092  B4 03			     mov      ah,3
+    209					;
+    210					;	 int 22h
+    211					;
+    212	0094  CD 22			     int      22h
+    213					;
+    214					;      }
+    215					;      return _AX;
+    216					;
+    217	0096  EB 00			     jmp     short @6@114
+    218	0098			     @6@114:
+    219					;
+    220					;    }
+    221					;
+    222	0098  5D			     pop     bp
+    223	0099  C3			     ret
+    224	009A			     _getcolor	     endp
+    225					;
+    226					;    void setcolor (int	cor)
+    227					;
+    228					     assume  cs:_TEXT
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 5
+lib.ASM
+
+
+
+    229	009A			     _setcolor	     proc    near
+    230	009A  55			     push    bp
+    231	009B  8B EC			     mov     bp,sp
+    232					;
+    233					;    {
+    234					;      _BX = cor;
+    235					;
+    236	009D  8B 5E 04			     mov     bx,word ptr [bp+4]
+    237					;
+    238					;      asm {
+    239					;	 mov ah,SC_SETCOLOR
+    240					;
+    241	00A0  B4 04			     mov      ah,4
+    242					;
+    243					;	 int 22h
+    244					;
+    245	00A2  CD 22			     int      22h
+    246					;
+    247					;      }
+    248					;    }
+    249					;
+    250	00A4  5D			     pop     bp
+    251	00A5  C3			     ret
+    252	00A6			     _setcolor	     endp
+    253					;
+    254					;    int  wherex()
+    255					;
+    256					     assume  cs:_TEXT
+    257	00A6			     _wherex proc    near
+    258	00A6  55			     push    bp
+    259	00A7  8B EC			     mov     bp,sp
+    260					;
+    261					;    {
+    262					;      asm {
+    263					;	     mov     ah,SC_WHEREX
+    264					;
+    265	00A9  B4 05			     mov	     ah,5
+    266					;
+    267					;	     int     22h
+    268					;
+    269	00AB  CD 22			     int	     22h
+    270					;
+    271					;      }
+    272					;      return _AX;
+    273					;
+    274	00AD  EB 00			     jmp     short @8@114
+    275	00AF			     @8@114:
+    276					;
+    277					;    }
+    278					;
+    279	00AF  5D			     pop     bp
+    280	00B0  C3			     ret
+    281	00B1			     _wherex endp
+    282					;
+    283					;    int  wherey()
+    284					;
+    285					     assume  cs:_TEXT
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 6
+lib.ASM
+
+
+
+    286	00B1			     _wherey proc    near
+    287	00B1  55			     push    bp
+    288	00B2  8B EC			     mov     bp,sp
+    289					;
+    290					;    {
+    291					;      asm {
+    292					;	     mov     ah,SC_WHEREY
+    293					;
+    294	00B4  B4 06			     mov	     ah,6
+    295					;
+    296					;	     int     22h
+    297					;
+    298	00B6  CD 22			     int	     22h
+    299					;
+    300					;      }
+    301					;      return _AX;
+    302					;
+    303	00B8  EB 00			     jmp     short @9@114
+    304	00BA			     @9@114:
+    305					;
+    306					;    }
+    307					;
+    308	00BA  5D			     pop     bp
+    309	00BB  C3			     ret
+    310	00BC			     _wherey endp
+    311					;
+    312					;    void gotoxy (int x,int y)
+    313					;
+    314					     assume  cs:_TEXT
+    315	00BC			     _gotoxy proc    near
+    316	00BC  55			     push    bp
+    317	00BD  8B EC			     mov     bp,sp
+    318					;
+    319					;    {
+    320					;      _BX = x;
+    321					;
+    322	00BF  8B 5E 04			     mov     bx,word ptr [bp+4]
+    323					;
+    324					;      _CX = y;
+    325					;
+    326	00C2  8B 4E 06			     mov     cx,word ptr [bp+6]
+    327					;
+    328					;      asm {
+    329					;	     mov     ah,SC_GOTOXY
+    330					;
+    331	00C5  B4 07			     mov	     ah,7
+    332					;
+    333					;	     int     22h
+    334					;
+    335	00C7  CD 22			     int	     22h
+    336					;
+    337					;      }
+    338					;    }
+    339					;
+    340	00C9  5D			     pop     bp
+    341	00CA  C3			     ret
+    342	00CB			     _gotoxy endp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 7
+lib.ASM
+
+
+
+    343					;
+    344					;    void getdate(struct date far *dt)
+    345					;
+    346					     assume  cs:_TEXT
+    347	00CB			     _getdate	     proc    near
+    348	00CB  55			     push    bp
+    349	00CC  8B EC			     mov     bp,sp
+    350					;
+    351					;    {
+    352					;      _BX = FP_SEG(dt);
+    353					;
+    354	00CE  FF 76 06			     push    word ptr [bp+6]
+    355	00D1  FF 76 04			     push    word ptr [bp+4]
+    356	00D4  E8 0000e			     call    near ptr _FP_SEG
+    357	00D7  59			     pop     cx
+    358	00D8  59			     pop     cx
+    359	00D9  8B D8			     mov     bx,ax
+    360					;
+    361					;      _CX = FP_OFF(dt);
+    362					;
+    363	00DB  FF 76 06			     push    word ptr [bp+6]
+    364	00DE  FF 76 04			     push    word ptr [bp+4]
+    365	00E1  E8 0000e			     call    near ptr _FP_OFF
+    366	00E4  59			     pop     cx
+    367	00E5  59			     pop     cx
+    368	00E6  8B C8			     mov     cx,ax
+    369					;
+    370					;      asm {
+    371					;	     mov     ah,SC_GETDATE
+    372					;
+    373	00E8  B4 08			     mov	     ah,8
+    374					;
+    375					;	     int     22h
+    376					;
+    377	00EA  CD 22			     int	     22h
+    378					;
+    379					;      }
+    380					;    }
+    381					;
+    382	00EC  5D			     pop     bp
+    383	00ED  C3			     ret
+    384	00EE			     _getdate	     endp
+    385					;
+    386					;    void gettime(struct time far *tm)
+    387					;
+    388					     assume  cs:_TEXT
+    389	00EE			     _gettime	     proc    near
+    390	00EE  55			     push    bp
+    391	00EF  8B EC			     mov     bp,sp
+    392					;
+    393					;    {
+    394					;      _BX = FP_SEG(tm);
+    395					;
+    396	00F1  FF 76 06			     push    word ptr [bp+6]
+    397	00F4  FF 76 04			     push    word ptr [bp+4]
+    398	00F7  E8 0000e			     call    near ptr _FP_SEG
+    399	00FA  59			     pop     cx
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 8
+lib.ASM
+
+
+
+    400	00FB  59			     pop     cx
+    401	00FC  8B D8			     mov     bx,ax
+    402					;
+    403					;      _CX = FP_OFF(tm);
+    404					;
+    405	00FE  FF 76 06			     push    word ptr [bp+6]
+    406	0101  FF 76 04			     push    word ptr [bp+4]
+    407	0104  E8 0000e			     call    near ptr _FP_OFF
+    408	0107  59			     pop     cx
+    409	0108  59			     pop     cx
+    410	0109  8B C8			     mov     cx,ax
+    411					;
+    412					;      asm {
+    413					;	     mov     ah,SC_GETTIME
+    414					;
+    415	010B  B4 09			     mov	     ah,9
+    416					;
+    417					;	     int     22h
+    418					;
+    419	010D  CD 22			     int	     22h
+    420					;
+    421					;      }
+    422					;    }
+    423					;
+    424	010F  5D			     pop     bp
+    425	0110  C3			     ret
+    426	0111			     _gettime	     endp
+    427					;
+    428					;    char far *strcpy (char far	*dest,char far *orig)
+    429					;
+    430					     assume  cs:_TEXT
+    431	0111			     _strcpy proc    near
+    432	0111  55			     push    bp
+    433	0112  8B EC			     mov     bp,sp
+    434	0114  83 EC 04			     sub     sp,4
+    435					;
+    436					;    {
+    437					;      char far	*res;
+    438					;
+    439					;      res = dest;
+    440					;
+    441	0117  8B 46 06			     mov     ax,word ptr [bp+6]
+    442	011A  8B 56 04			     mov     dx,word ptr [bp+4]
+    443	011D  89 46 FE			     mov     word ptr [bp-2],ax
+    444	0120  89 56 FC			     mov     word ptr [bp-4],dx
+    445	0123  EB 12			     jmp     short @13@86
+    446	0125			     @13@58:
+    447					;
+    448					;      while (*orig!='\0')
+    449					;	     *dest++ = *orig++;
+    450					;
+    451	0125  C4 5E 08			     les     bx,dword ptr [bp+8]
+    452	0128  26: 8A 07			     mov     al,byte ptr es:[bx]
+    453	012B  C4 5E 04			     les     bx,dword ptr [bp+4]
+    454	012E  26: 88 07			     mov     byte ptr es:[bx],al
+    455	0131  FF 46 08			     inc     word ptr [bp+8]
+    456	0134  FF 46 04			     inc     word ptr [bp+4]
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 9
+lib.ASM
+
+
+
+    457	0137			     @13@86:
+    458	0137  C4 5E 08			     les     bx,dword ptr [bp+8]
+    459	013A  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    460	013E  75 E5			     jne     short @13@58
+    461					;
+    462					;      *dest='\0';
+    463					;
+    464	0140  C4 5E 04			     les     bx,dword ptr [bp+4]
+    465	0143  26: C6 07	00		     mov     byte ptr es:[bx],0
+    466					;
+    467					;      return(res);
+    468					;
+    469	0147  8B 56 FE			     mov     dx,word ptr [bp-2]
+    470	014A  8B 46 FC			     mov     ax,word ptr [bp-4]
+    471	014D  EB 00			     jmp     short @13@142
+    472	014F			     @13@142:
+    473					;
+    474					;    }
+    475					;
+    476	014F  8B E5			     mov     sp,bp
+    477	0151  5D			     pop     bp
+    478	0152  C3			     ret
+    479	0153			     _strcpy endp
+    480					;
+    481					;    char far *strncpy (char far *dest,char far	*orig, size_t maxlen)
+    482					;
+    483					     assume  cs:_TEXT
+    484	0153			     _strncpy	     proc    near
+    485	0153  55			     push    bp
+    486	0154  8B EC			     mov     bp,sp
+    487	0156  83 EC 04			     sub     sp,4
+    488	0159  56			     push    si
+    489	015A  8B 76 0C			     mov     si,word ptr [bp+12]
+    490					;
+    491					;    {
+    492					;      char far	*res;
+    493					;      size_t i	= 0;
+    494					;
+    495	015D  33 C9			     xor     cx,cx
+    496					;
+    497					;
+    498					;      res = dest;
+    499					;
+    500	015F  8B 46 06			     mov     ax,word ptr [bp+6]
+    501	0162  8B 56 04			     mov     dx,word ptr [bp+4]
+    502	0165  89 46 FE			     mov     word ptr [bp-2],ax
+    503	0168  89 56 FC			     mov     word ptr [bp-4],dx
+    504	016B  EB 13			     jmp     short @14@86
+    505	016D			     @14@58:
+    506					;
+    507					;      while (*orig!='\0' && i<maxlen)	{
+    508					;	     *dest++ = *orig++;
+    509					;
+    510	016D  C4 5E 08			     les     bx,dword ptr [bp+8]
+    511	0170  26: 8A 07			     mov     al,byte ptr es:[bx]
+    512	0173  C4 5E 04			     les     bx,dword ptr [bp+4]
+    513	0176  26: 88 07			     mov     byte ptr es:[bx],al
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 10
+lib.ASM
+
+
+
+    514	0179  FF 46 08			     inc     word ptr [bp+8]
+    515	017C  FF 46 04			     inc     word ptr [bp+4]
+    516					;
+    517					;	     ++i;
+    518					;
+    519	017F  41			     inc     cx
+    520	0180			     @14@86:
+    521	0180  C4 5E 08			     les     bx,dword ptr [bp+8]
+    522	0183  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    523	0187  74 04			     je	     short @14@142
+    524	0189  3B CE			     cmp     cx,si
+    525	018B  72 E0			     jb	     short @14@58
+    526	018D			     @14@142:
+    527					;
+    528					;      }
+    529					;      if (i<maxlen)
+    530					;
+    531	018D  3B CE			     cmp     cx,si
+    532	018F  73 07			     jae     short @14@198
+    533					;
+    534					;	  *dest='\0';
+    535					;
+    536	0191  C4 5E 04			     les     bx,dword ptr [bp+4]
+    537	0194  26: C6 07	00		     mov     byte ptr es:[bx],0
+    538	0198			     @14@198:
+    539					;
+    540					;      return(res);
+    541					;
+    542	0198  8B 56 FE			     mov     dx,word ptr [bp-2]
+    543	019B  8B 46 FC			     mov     ax,word ptr [bp-4]
+    544	019E  EB 00			     jmp     short @14@226
+    545	01A0			     @14@226:
+    546					;
+    547					;    }
+    548					;
+    549	01A0  5E			     pop     si
+    550	01A1  8B E5			     mov     sp,bp
+    551	01A3  5D			     pop     bp
+    552	01A4  C3			     ret
+    553	01A5			     _strncpy	     endp
+    554					;
+    555					;    char far *strupr (char far	*str)
+    556					;
+    557					     assume  cs:_TEXT
+    558	01A5			     _strupr proc    near
+    559	01A5  55			     push    bp
+    560	01A6  8B EC			     mov     bp,sp
+    561	01A8  83 EC 04			     sub     sp,4
+    562					;
+    563					;    {
+    564					;      char far	*res;
+    565					;
+    566					;      res = str;
+    567					;
+    568	01AB  8B 46 06			     mov     ax,word ptr [bp+6]
+    569	01AE  8B 56 04			     mov     dx,word ptr [bp+4]
+    570	01B1  89 46 FE			     mov     word ptr [bp-2],ax
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 11
+lib.ASM
+
+
+
+    571	01B4  89 56 FC			     mov     word ptr [bp-4],dx
+    572	01B7  EB 23			     jmp     short @15@170
+    573	01B9			     @15@58:
+    574					;
+    575					;      while (*str!='\0')  {
+    576					;	     if	(*str>='a' && *str<='z')
+    577					;
+    578	01B9  C4 5E 04			     les     bx,dword ptr [bp+4]
+    579	01BC  26: 80 3F	61		     cmp     byte ptr es:[bx],97
+    580	01C0  7C 17			     jl	     short @15@142
+    581	01C2  C4 5E 04			     les     bx,dword ptr [bp+4]
+    582	01C5  26: 80 3F	7A		     cmp     byte ptr es:[bx],122
+    583	01C9  7F 0E			     jg	     short @15@142
+    584					;
+    585					;		*str -=	('a'-'A');
+    586					;
+    587	01CB  C4 5E 04			     les     bx,dword ptr [bp+4]
+    588	01CE  26: 8A 07			     mov     al,byte ptr es:[bx]
+    589	01D1  04 E0			     add     al,224
+    590	01D3  C4 5E 04			     les     bx,dword ptr [bp+4]
+    591	01D6  26: 88 07			     mov     byte ptr es:[bx],al
+    592	01D9			     @15@142:
+    593					;
+    594					;	     ++str;
+    595					;
+    596	01D9  FF 46 04			     inc     word ptr [bp+4]
+    597	01DC			     @15@170:
+    598	01DC  C4 5E 04			     les     bx,dword ptr [bp+4]
+    599	01DF  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    600	01E3  75 D4			     jne     short @15@58
+    601					;
+    602					;      }
+    603					;      return(res);
+    604					;
+    605	01E5  8B 56 FE			     mov     dx,word ptr [bp-2]
+    606	01E8  8B 46 FC			     mov     ax,word ptr [bp-4]
+    607	01EB  EB 00			     jmp     short @15@226
+    608	01ED			     @15@226:
+    609					;
+    610					;    }
+    611					;
+    612	01ED  8B E5			     mov     sp,bp
+    613	01EF  5D			     pop     bp
+    614	01F0  C3			     ret
+    615	01F1			     _strupr endp
+    616					;
+    617					;    char far *strlwr (char far	*str)
+    618					;
+    619					     assume  cs:_TEXT
+    620	01F1			     _strlwr proc    near
+    621	01F1  55			     push    bp
+    622	01F2  8B EC			     mov     bp,sp
+    623	01F4  83 EC 04			     sub     sp,4
+    624					;
+    625					;    {
+    626					;      char far	*res;
+    627					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 12
+lib.ASM
+
+
+
+    628					;      res = str;
+    629					;
+    630	01F7  8B 46 06			     mov     ax,word ptr [bp+6]
+    631	01FA  8B 56 04			     mov     dx,word ptr [bp+4]
+    632	01FD  89 46 FE			     mov     word ptr [bp-2],ax
+    633	0200  89 56 FC			     mov     word ptr [bp-4],dx
+    634	0203  EB 23			     jmp     short @16@170
+    635	0205			     @16@58:
+    636					;
+    637					;      while (*str!='\0')  {
+    638					;	     if	(*str>='A' && *str<='Z')
+    639					;
+    640	0205  C4 5E 04			     les     bx,dword ptr [bp+4]
+    641	0208  26: 80 3F	41		     cmp     byte ptr es:[bx],65
+    642	020C  7C 17			     jl	     short @16@142
+    643	020E  C4 5E 04			     les     bx,dword ptr [bp+4]
+    644	0211  26: 80 3F	5A		     cmp     byte ptr es:[bx],90
+    645	0215  7F 0E			     jg	     short @16@142
+    646					;
+    647					;		*str +=	('a'-'A');
+    648					;
+    649	0217  C4 5E 04			     les     bx,dword ptr [bp+4]
+    650	021A  26: 8A 07			     mov     al,byte ptr es:[bx]
+    651	021D  04 20			     add     al,32
+    652	021F  C4 5E 04			     les     bx,dword ptr [bp+4]
+    653	0222  26: 88 07			     mov     byte ptr es:[bx],al
+    654	0225			     @16@142:
+    655					;
+    656					;	     ++str;
+    657					;
+    658	0225  FF 46 04			     inc     word ptr [bp+4]
+    659	0228			     @16@170:
+    660	0228  C4 5E 04			     les     bx,dword ptr [bp+4]
+    661	022B  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    662	022F  75 D4			     jne     short @16@58
+    663					;
+    664					;      }
+    665					;      return(res);
+    666					;
+    667	0231  8B 56 FE			     mov     dx,word ptr [bp-2]
+    668	0234  8B 46 FC			     mov     ax,word ptr [bp-4]
+    669	0237  EB 00			     jmp     short @16@226
+    670	0239			     @16@226:
+    671					;
+    672					;    }
+    673					;
+    674	0239  8B E5			     mov     sp,bp
+    675	023B  5D			     pop     bp
+    676	023C  C3			     ret
+    677	023D			     _strlwr endp
+    678					;
+    679					;    int strcmp	(char far *s1,char far *s2)
+    680					;
+    681					     assume  cs:_TEXT
+    682	023D			     _strcmp proc    near
+    683	023D  55			     push    bp
+    684	023E  8B EC			     mov     bp,sp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 13
+lib.ASM
+
+
+
+    685	0240  EB 13			     jmp     short @17@170
+    686	0242			     @17@58:
+    687					;
+    688					;    {
+    689					;      while (*s1 == *s2)  {
+    690					;	     if	(*s1=='\0')
+    691					;
+    692	0242  C4 5E 04			     les     bx,dword ptr [bp+4]
+    693	0245  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    694	0249  75 04			     jne     short @17@142
+    695					;
+    696					;		return(0);
+    697					;
+    698	024B  33 C0			     xor     ax,ax
+    699	024D			     @17@114:
+    700	024D  EB 2E			     jmp     short @17@310
+    701	024F			     @17@142:
+    702					;
+    703					;	     ++s1;
+    704					;
+    705	024F  FF 46 04			     inc     word ptr [bp+4]
+    706					;
+    707					;	     ++s2;
+    708					;
+    709	0252  FF 46 08			     inc     word ptr [bp+8]
+    710	0255			     @17@170:
+    711	0255  C4 5E 04			     les     bx,dword ptr [bp+4]
+    712	0258  26: 8A 07			     mov     al,byte ptr es:[bx]
+    713	025B  C4 5E 08			     les     bx,dword ptr [bp+8]
+    714	025E  26: 3A 07			     cmp     al,byte ptr es:[bx]
+    715	0261  74 DF			     je	     short @17@58
+    716					;
+    717					;      }
+    718					;      if (*s1<*s2)
+    719					;
+    720	0263  C4 5E 04			     les     bx,dword ptr [bp+4]
+    721	0266  26: 8A 07			     mov     al,byte ptr es:[bx]
+    722	0269  C4 5E 08			     les     bx,dword ptr [bp+8]
+    723	026C  26: 3A 07			     cmp     al,byte ptr es:[bx]
+    724	026F  7D 07			     jge     short @17@282
+    725					;
+    726					;	  return(-1);
+    727					;
+    728	0271  B8 FFFF			     mov     ax,-1
+    729	0274  EB D7			     jmp     short @17@114
+    730	0276  EB 05			     jmp     short @17@310
+    731	0278			     @17@282:
+    732					;
+    733					;      else
+    734					;	  return(1);
+    735					;
+    736	0278  B8 0001			     mov     ax,1
+    737	027B  EB D0			     jmp     short @17@114
+    738	027D			     @17@310:
+    739					;
+    740					;    }
+    741					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 14
+lib.ASM
+
+
+
+    742	027D  5D			     pop     bp
+    743	027E  C3			     ret
+    744	027F			     _strcmp endp
+    745					;
+    746					;    size_t strlen (char far *str)
+    747					;
+    748					     assume  cs:_TEXT
+    749	027F			     _strlen proc    near
+    750	027F  55			     push    bp
+    751	0280  8B EC			     mov     bp,sp
+    752					;
+    753					;    {
+    754					;      size_t res=0;
+    755					;
+    756	0282  33 D2			     xor     dx,dx
+    757	0284  EB 01			     jmp     short @18@86
+    758	0286			     @18@58:
+    759					;
+    760					;
+    761					;      while (*str++!='\0')
+    762					;	     ++res;
+    763					;
+    764	0286  42			     inc     dx
+    765	0287			     @18@86:
+    766	0287  C4 5E 04			     les     bx,dword ptr [bp+4]
+    767	028A  FF 46 04			     inc     word ptr [bp+4]
+    768	028D  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    769	0291  75 F3			     jne     short @18@58
+    770					;
+    771					;      return(res);
+    772					;
+    773	0293  8B C2			     mov     ax,dx
+    774	0295  EB 00			     jmp     short @18@142
+    775	0297			     @18@142:
+    776					;
+    777					;    }
+    778					;
+    779	0297  5D			     pop     bp
+    780	0298  C3			     ret
+    781	0299			     _strlen endp
+    782					;
+    783					;    int isdigit (char caracter)
+    784					;
+    785					     assume  cs:_TEXT
+    786	0299			     _isdigit	     proc    near
+    787	0299  55			     push    bp
+    788	029A  8B EC			     mov     bp,sp
+    789	029C  8A 56 04			     mov     dl,byte ptr [bp+4]
+    790					;
+    791					;    {
+    792					;      if (caracter<'0'	|| caracter>'9')
+    793					;
+    794	029F  80 FA 30			     cmp     dl,48
+    795	02A2  7C 05			     jl	     short @19@86
+    796	02A4  80 FA 39			     cmp     dl,57
+    797	02A7  7E 06			     jle     short @19@170
+    798	02A9			     @19@86:
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 15
+lib.ASM
+
+
+
+    799					;
+    800					;	  return(0);
+    801					;
+    802	02A9  33 C0			     xor     ax,ax
+    803	02AB			     @19@114:
+    804	02AB  EB 07			     jmp     short @19@198
+    805	02AD  EB 05			     jmp     short @19@198
+    806	02AF			     @19@170:
+    807					;
+    808					;      else
+    809					;	  return(1);
+    810					;
+    811	02AF  B8 0001			     mov     ax,1
+    812	02B2  EB F7			     jmp     short @19@114
+    813	02B4			     @19@198:
+    814					;
+    815					;    }
+    816					;
+    817	02B4  5D			     pop     bp
+    818	02B5  C3			     ret
+    819	02B6			     _isdigit	     endp
+    820					;
+    821					;    int isalpha (char caracter)
+    822					;
+    823					     assume  cs:_TEXT
+    824	02B6			     _isalpha	     proc    near
+    825	02B6  55			     push    bp
+    826	02B7  8B EC			     mov     bp,sp
+    827	02B9  8A 56 04			     mov     dl,byte ptr [bp+4]
+    828					;
+    829					;    {
+    830					;      if ( (caracter>='A' && caracter<='Z') ||	(caracter>='a' && caracter<='z') )
+    831					;
+    832	02BC  80 FA 41			     cmp     dl,65
+    833	02BF  7C 05			     jl	     short @20@86
+    834	02C1  80 FA 5A			     cmp     dl,90
+    835	02C4  7E 0A			     jle     short @20@142
+    836	02C6			     @20@86:
+    837	02C6  80 FA 61			     cmp     dl,97
+    838	02C9  7C 0C			     jl	     short @20@226
+    839	02CB  80 FA 7A			     cmp     dl,122
+    840	02CE  7F 07			     jg	     short @20@226
+    841	02D0			     @20@142:
+    842					;
+    843					;	  return(1);
+    844					;
+    845	02D0  B8 0001			     mov     ax,1
+    846	02D3			     @20@170:
+    847	02D3  EB 06			     jmp     short @20@254
+    848	02D5  EB 04			     jmp     short @20@254
+    849	02D7			     @20@226:
+    850					;
+    851					;      else
+    852					;	  return(0);
+    853					;
+    854	02D7  33 C0			     xor     ax,ax
+    855	02D9  EB F8			     jmp     short @20@170
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 16
+lib.ASM
+
+
+
+    856	02DB			     @20@254:
+    857					;
+    858					;    }
+    859					;
+    860	02DB  5D			     pop     bp
+    861	02DC  C3			     ret
+    862	02DD			     _isalpha	     endp
+    863					;
+    864					;    int atoi (char far	*str)
+    865					;
+    866					     assume  cs:_TEXT
+    867	02DD			     _atoi   proc    near
+    868	02DD  55			     push    bp
+    869	02DE  8B EC			     mov     bp,sp
+    870	02E0  56			     push    si
+    871	02E1  57			     push    di
+    872					;
+    873					;    {
+    874					;      int val=0;
+    875					;
+    876	02E2  33 F6			     xor     si,si
+    877					;
+    878					;      int sinal=1;
+    879					;
+    880	02E4  BF 0001			     mov     di,1
+    881	02E7  EB 03			     jmp     short @21@86
+    882	02E9			     @21@58:
+    883					;
+    884					;
+    885					;      /* Pula espaços e tabulações */
+    886					;      while (*str!='\0' && (*str==9 ||	*str=='	'))
+    887					;	     ++str;
+    888					;
+    889	02E9  FF 46 04			     inc     word ptr [bp+4]
+    890	02EC			     @21@86:
+    891	02EC  C4 5E 04			     les     bx,dword ptr [bp+4]
+    892	02EF  26: 80 3F	00		     cmp     byte ptr es:[bx],0
+    893	02F3  74 12			     je	     short @21@170
+    894	02F5  C4 5E 04			     les     bx,dword ptr [bp+4]
+    895	02F8  26: 80 3F	09		     cmp     byte ptr es:[bx],9
+    896	02FC  74 EB			     je	     short @21@58
+    897	02FE  C4 5E 04			     les     bx,dword ptr [bp+4]
+    898	0301  26: 80 3F	20		     cmp     byte ptr es:[bx],32
+    899	0305  74 E2			     je	     short @21@58
+    900	0307			     @21@170:
+    901					;
+    902					;      /* Verifica o sinal opcional */
+    903					;      if (*str=='-')  {
+    904					;
+    905	0307  C4 5E 04			     les     bx,dword ptr [bp+4]
+    906	030A  26: 80 3F	2D		     cmp     byte ptr es:[bx],45
+    907	030E  75 06			     jne     short @21@226
+    908					;
+    909					;	  sinal=-1;
+    910					;
+    911	0310  BF FFFF			     mov     di,-1
+    912					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 17
+lib.ASM
+
+
+
+    913					;	  ++str;
+    914					;
+    915	0313  FF 46 04			     inc     word ptr [bp+4]
+    916	0316			     @21@226:
+    917					;
+    918					;      }
+    919					;      if (*str=='+')
+    920					;
+    921	0316  C4 5E 04			     les     bx,dword ptr [bp+4]
+    922	0319  26: 80 3F	2B		     cmp     byte ptr es:[bx],43
+    923	031D  75 03			     jne     short @21@282
+    924					;
+    925					;	  ++str;
+    926					;
+    927	031F  FF 46 04			     inc     word ptr [bp+4]
+    928	0322			     @21@282:
+    929	0322  EB 1A			     jmp     short @21@338
+    930	0324			     @21@310:
+    931					;
+    932					;      while (isdigit(*str))  {
+    933					;	     val=val*10+(*str-'0');
+    934					;
+    935	0324  C4 5E 04			     les     bx,dword ptr [bp+4]
+    936	0327  26: 8A 07			     mov     al,byte ptr es:[bx]
+    937	032A  98			     cbw
+    938	032B  50			     push    ax
+    939	032C  8B C6			     mov     ax,si
+    940	032E  BA 000A			     mov     dx,10
+    941	0331  F7 EA			     imul    dx
+    942	0333  5A			     pop     dx
+    943	0334  03 D0			     add     dx,ax
+    944	0336  83 C2 D0			     add     dx,-48
+    945	0339  8B F2			     mov     si,dx
+    946					;
+    947					;	     ++str;
+    948					;
+    949	033B  FF 46 04			     inc     word ptr [bp+4]
+    950	033E			     @21@338:
+    951	033E  C4 5E 04			     les     bx,dword ptr [bp+4]
+    952	0341  26: 8A 07			     mov     al,byte ptr es:[bx]
+    953	0344  50			     push    ax
+    954	0345  E8 FF51			     call    near ptr _isdigit
+    955	0348  59			     pop     cx
+    956	0349  0B C0			     or	     ax,ax
+    957	034B  75 D7			     jne     short @21@310
+    958					;
+    959					;      }
+    960					;      return (sinal*val);
+    961					;
+    962	034D  8B C7			     mov     ax,di
+    963	034F  F7 EE			     imul    si
+    964	0351  EB 00			     jmp     short @21@394
+    965	0353			     @21@394:
+    966					;
+    967					;    }
+    968					;
+    969	0353  5F			     pop     di
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 18
+lib.ASM
+
+
+
+    970	0354  5E			     pop     si
+    971	0355  5D			     pop     bp
+    972	0356  C3			     ret
+    973	0357			     _atoi   endp
+    974					;
+    975					;    void unsignedtostr(char far *str,unsigned i,unsigned tam,char c)
+    976					;
+    977					     assume  cs:_TEXT
+    978	0357			     _unsignedtostr  proc    near
+    979	0357  55			     push    bp
+    980	0358  8B EC			     mov     bp,sp
+    981	035A  83 EC 04			     sub     sp,4
+    982	035D  56			     push    si
+    983	035E  57			     push    di
+    984	035F  8B 4E 08			     mov     cx,word ptr [bp+8]
+    985					;
+    986					;    {
+    987					;      unsigned	dig,div=1,tamreal,x=0;
+    988					;
+    989	0362  BE 0001			     mov     si,1
+    990	0365  C7 46 FC 0000		     mov     word ptr [bp-4],0
+    991					;
+    992					;
+    993					;      if (i>9999)
+    994					;
+    995	036A  81 F9 270F		     cmp     cx,9999
+    996	036E  76 05			     jbe     short @22@86
+    997					;
+    998					;	  tamreal = 5;
+    999					;
+   1000	0370  BF 0005			     mov     di,5
+   1001	0373  EB 22			     jmp     short @22@282
+   1002	0375			     @22@86:
+   1003					;
+   1004					;      else
+   1005					;	  if (i>999)
+   1006					;
+   1007	0375  81 F9 03E7		     cmp     cx,999
+   1008	0379  76 05			     jbe     short @22@142
+   1009					;
+   1010					;	     tamreal = 4;
+   1011					;
+   1012	037B  BF 0004			     mov     di,4
+   1013	037E  EB 17			     jmp     short @22@282
+   1014	0380			     @22@142:
+   1015					;
+   1016					;	  else
+   1017					;	     if	(i>99)
+   1018					;
+   1019	0380  83 F9 63			     cmp     cx,99
+   1020	0383  76 05			     jbe     short @22@198
+   1021					;
+   1022					;		tamreal	= 3;
+   1023					;
+   1024	0385  BF 0003			     mov     di,3
+   1025	0388  EB 0D			     jmp     short @22@282
+   1026	038A			     @22@198:
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 19
+lib.ASM
+
+
+
+   1027					;
+   1028					;	     else
+   1029					;		if (i>9)
+   1030					;
+   1031	038A  83 F9 09			     cmp     cx,9
+   1032	038D  76 05			     jbe     short @22@254
+   1033					;
+   1034					;		   tamreal = 2;
+   1035					;
+   1036	038F  BF 0002			     mov     di,2
+   1037	0392  EB 03			     jmp     short @22@282
+   1038	0394			     @22@254:
+   1039					;
+   1040					;		else
+   1041					;		   tamreal = 1;
+   1042					;
+   1043	0394  BF 0001			     mov     di,1
+   1044	0397			     @22@282:
+   1045					;
+   1046					;      if (tam>5)
+   1047					;
+   1048	0397  83 7E 0A 05		     cmp     word ptr [bp+10],5
+   1049	039B  76 05			     jbe     short @22@338
+   1050					;
+   1051					;	  tam =	5;
+   1052					;
+   1053	039D  C7 46 0A 0005		     mov     word ptr [bp+10],5
+   1054	03A2			     @22@338:
+   1055					;
+   1056					;      if (tamreal>tam)
+   1057					;
+   1058	03A2  3B 7E 0A			     cmp     di,word ptr [bp+10]
+   1059	03A5  76 03			     jbe     short @22@394
+   1060					;
+   1061					;	  tam =	tamreal;
+   1062					;
+   1063	03A7  89 7E 0A			     mov     word ptr [bp+10],di
+   1064	03AA			     @22@394:
+   1065					;
+   1066					;      for (dig=0;dig<tam-1;++dig)
+   1067					;
+   1068	03AA  C7 46 FE 0000		     mov     word ptr [bp-2],0
+   1069	03AF  EB 0C			     jmp     short @22@478
+   1070	03B1			     @22@422:
+   1071					;
+   1072					;	   div*=10;
+   1073					;
+   1074	03B1  BA 000A			     mov     dx,10
+   1075	03B4  8B C6			     mov     ax,si
+   1076	03B6  F7 EA			     imul    dx
+   1077	03B8  8B F0			     mov     si,ax
+   1078	03BA  FF 46 FE			     inc     word ptr [bp-2]
+   1079	03BD			     @22@478:
+   1080	03BD  8B 46 0A			     mov     ax,word ptr [bp+10]
+   1081	03C0  48			     dec     ax
+   1082	03C1  3B 46 FE			     cmp     ax,word ptr [bp-2]
+   1083	03C4  77 EB			     ja	     short @22@422
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 20
+lib.ASM
+
+
+
+   1084	03C6  EB 50			     jmp     short @22@758
+   1085	03C8			     @22@534:
+   1086					;
+   1087					;      while (div>1)  {
+   1088					;	    if (i<div)	{
+   1089					;
+   1090	03C8  3B CE			     cmp     cx,si
+   1091	03CA  73 1D			     jae     short @22@702
+   1092					;
+   1093					;	       if (!x)
+   1094					;
+   1095	03CC  83 7E FC 00		     cmp     word ptr [bp-4],0
+   1096	03D0  75 0B			     jne     short @22@618
+   1097					;
+   1098					;		  *str++=c;
+   1099					;
+   1100	03D2  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1101	03D5  8A 46 0C			     mov     al,byte ptr [bp+12]
+   1102	03D8  26: 88 07			     mov     byte ptr es:[bx],al
+   1103	03DB  EB 07			     jmp     short @22@646
+   1104	03DD			     @22@618:
+   1105					;
+   1106					;	       else
+   1107					;		  *str++='0';
+   1108					;
+   1109	03DD  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1110	03E0  26: C6 07	30		     mov     byte ptr es:[bx],48
+   1111	03E4			     @22@646:
+   1112	03E4  FF 46 04			     inc     word ptr [bp+4]
+   1113					;
+   1114					;	    }
+   1115					;
+   1116	03E7  EB 24			     jmp     short @22@730
+   1117	03E9			     @22@702:
+   1118					;
+   1119					;	    else  {
+   1120					;	       x = 1;
+   1121					;
+   1122	03E9  C7 46 FC 0001		     mov     word ptr [bp-4],1
+   1123					;
+   1124					;	       dig   = i / div;
+   1125					;
+   1126	03EE  8B C1			     mov     ax,cx
+   1127	03F0  33 D2			     xor     dx,dx
+   1128	03F2  F7 F6			     div     si
+   1129	03F4  89 46 FE			     mov     word ptr [bp-2],ax
+   1130					;
+   1131					;	       *str++= (dig+'0');
+   1132					;
+   1133	03F7  8A 46 FE			     mov     al,byte ptr [bp-2]
+   1134	03FA  04 30			     add     al,48
+   1135	03FC  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1136	03FF  26: 88 07			     mov     byte ptr es:[bx],al
+   1137	0402  FF 46 04			     inc     word ptr [bp+4]
+   1138					;
+   1139					;	       i = i % div;
+   1140					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 21
+lib.ASM
+
+
+
+   1141	0405  8B C1			     mov     ax,cx
+   1142	0407  33 D2			     xor     dx,dx
+   1143	0409  F7 F6			     div     si
+   1144	040B  8B CA			     mov     cx,dx
+   1145	040D			     @22@730:
+   1146					;
+   1147					;	    }
+   1148					;	    div	= div/10;
+   1149					;
+   1150	040D  8B C6			     mov     ax,si
+   1151	040F  BB 000A			     mov     bx,10
+   1152	0412  33 D2			     xor     dx,dx
+   1153	0414  F7 F3			     div     bx
+   1154	0416  8B F0			     mov     si,ax
+   1155	0418			     @22@758:
+   1156	0418  83 FE 01			     cmp     si,1
+   1157	041B  77 AB			     ja	     short @22@534
+   1158					;
+   1159					;      }
+   1160					;      *str++= (i+'0');
+   1161					;
+   1162	041D  8A C1			     mov     al,cl
+   1163	041F  04 30			     add     al,48
+   1164	0421  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1165	0424  26: 88 07			     mov     byte ptr es:[bx],al
+   1166	0427  FF 46 04			     inc     word ptr [bp+4]
+   1167					;
+   1168					;      *str = '\0';
+   1169					;
+   1170	042A  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1171	042D  26: C6 07	00		     mov     byte ptr es:[bx],0
+   1172					;
+   1173					;    }
+   1174					;
+   1175	0431  5F			     pop     di
+   1176	0432  5E			     pop     si
+   1177	0433  8B E5			     mov     sp,bp
+   1178	0435  5D			     pop     bp
+   1179	0436  C3			     ret
+   1180	0437			     _unsignedtostr  endp
+   1181					;
+   1182					;    void unsignedlongtostr(char far *str,unsigned long	i,unsigned tam,char c)
+   1183					;
+   1184					     assume  cs:_TEXT
+   1185	0437			     _unsignedlongtostr	     proc    near
+   1186	0437  55			     push    bp
+   1187	0438  8B EC			     mov     bp,sp
+   1188	043A  83 EC 08			     sub     sp,8
+   1189	043D  56			     push    si
+   1190	043E  57			     push    di
+   1191	043F  8B 7E 0C			     mov     di,word ptr [bp+12]
+   1192					;
+   1193					;    {
+   1194					;      unsigned	tamreal,dig,x=0;
+   1195					;
+   1196	0442  C7 46 FC 0000		     mov     word ptr [bp-4],0
+   1197					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 22
+lib.ASM
+
+
+
+   1198					;      unsigned	long div=1;
+   1199					;
+   1200	0447  C7 46 FA 0000		     mov     word ptr [bp-6],0
+   1201	044C  C7 46 F8 0001		     mov     word ptr [bp-8],1
+   1202					;
+   1203					;
+   1204					;      if (i>999999999)
+   1205					;
+   1206	0451  81 7E 0A 3B9A		     cmp     word ptr [bp+10],15258
+   1207	0456  72 0F			     jb	     short @23@142
+   1208	0458  77 07			     ja	     short @23@114
+   1209	045A  81 7E 08 C9FF		     cmp     word ptr [bp+8],-13825
+   1210	045F  76 06			     jbe     short @23@142
+   1211	0461			     @23@114:
+   1212					;
+   1213					;	  tamreal = 10;
+   1214					;
+   1215	0461  BE 000A			     mov     si,10
+   1216	0464  E9 00A5			     jmp     @23@1066
+   1217	0467			     @23@142:
+   1218					;
+   1219					;      else
+   1220					;	  if (i>99999999)
+   1221					;
+   1222	0467  81 7E 0A 05F5		     cmp     word ptr [bp+10],1525
+   1223	046C  72 0F			     jb	     short @23@254
+   1224	046E  77 07			     ja	     short @23@226
+   1225	0470  81 7E 08 E0FF		     cmp     word ptr [bp+8],-7937
+   1226	0475  76 06			     jbe     short @23@254
+   1227	0477			     @23@226:
+   1228					;
+   1229					;	     tamreal = 9;
+   1230					;
+   1231	0477  BE 0009			     mov     si,9
+   1232	047A  E9 008F			     jmp     @23@1066
+   1233	047D			     @23@254:
+   1234					;
+   1235					;	  else
+   1236					;	     if	(i>9999999)
+   1237					;
+   1238	047D  81 7E 0A 0098		     cmp     word ptr [bp+10],152
+   1239	0482  72 0F			     jb	     short @23@366
+   1240	0484  77 07			     ja	     short @23@338
+   1241	0486  81 7E 08 967F		     cmp     word ptr [bp+8],-27009
+   1242	048B  76 06			     jbe     short @23@366
+   1243	048D			     @23@338:
+   1244					;
+   1245					;		tamreal	= 8;
+   1246					;
+   1247	048D  BE 0008			     mov     si,8
+   1248	0490  EB 7A 90			     jmp     @23@1066
+   1249	0493			     @23@366:
+   1250					;
+   1251					;	     else
+   1252					;		if (i>999999)
+   1253					;
+   1254	0493  83 7E 0A 0F		     cmp     word ptr [bp+10],15
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 23
+lib.ASM
+
+
+
+   1255	0497  72 0E			     jb	     short @23@478
+   1256	0499  77 07			     ja	     short @23@450
+   1257	049B  81 7E 08 423F		     cmp     word ptr [bp+8],16959
+   1258	04A0  76 05			     jbe     short @23@478
+   1259	04A2			     @23@450:
+   1260					;
+   1261					;		   tamreal = 7;
+   1262					;
+   1263	04A2  BE 0007			     mov     si,7
+   1264	04A5  EB 65			     jmp     short @23@1066
+   1265	04A7			     @23@478:
+   1266					;
+   1267					;		else
+   1268					;		   if (i>99999)
+   1269					;
+   1270	04A7  83 7E 0A 01		     cmp     word ptr [bp+10],1
+   1271	04AB  72 0E			     jb	     short @23@590
+   1272	04AD  77 07			     ja	     short @23@562
+   1273	04AF  81 7E 08 869F		     cmp     word ptr [bp+8],-31073
+   1274	04B4  76 05			     jbe     short @23@590
+   1275	04B6			     @23@562:
+   1276					;
+   1277					;		      tamreal =	6;
+   1278					;
+   1279	04B6  BE 0006			     mov     si,6
+   1280	04B9  EB 51			     jmp     short @23@1066
+   1281	04BB			     @23@590:
+   1282					;
+   1283					;		   else
+   1284					;		      if (i>9999)
+   1285					;
+   1286	04BB  83 7E 0A 00		     cmp     word ptr [bp+10],0
+   1287	04BF  72 0E			     jb	     short @23@702
+   1288	04C1  77 07			     ja	     short @23@674
+   1289	04C3  81 7E 08 270F		     cmp     word ptr [bp+8],9999
+   1290	04C8  76 05			     jbe     short @23@702
+   1291	04CA			     @23@674:
+   1292					;
+   1293					;			 tamreal = 5;
+   1294					;
+   1295	04CA  BE 0005			     mov     si,5
+   1296	04CD  EB 3D			     jmp     short @23@1066
+   1297	04CF			     @23@702:
+   1298					;
+   1299					;		      else
+   1300					;			 if (i>999)
+   1301					;
+   1302	04CF  83 7E 0A 00		     cmp     word ptr [bp+10],0
+   1303	04D3  72 0E			     jb	     short @23@814
+   1304	04D5  77 07			     ja	     short @23@786
+   1305	04D7  81 7E 08 03E7		     cmp     word ptr [bp+8],999
+   1306	04DC  76 05			     jbe     short @23@814
+   1307	04DE			     @23@786:
+   1308					;
+   1309					;			    tamreal = 4;
+   1310					;
+   1311	04DE  BE 0004			     mov     si,4
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 24
+lib.ASM
+
+
+
+   1312	04E1  EB 29			     jmp     short @23@1066
+   1313	04E3			     @23@814:
+   1314					;
+   1315					;			 else
+   1316					;			    if (i>99)
+   1317					;
+   1318	04E3  83 7E 0A 00		     cmp     word ptr [bp+10],0
+   1319	04E7  72 0D			     jb	     short @23@926
+   1320	04E9  77 06			     ja	     short @23@898
+   1321	04EB  83 7E 08 63		     cmp     word ptr [bp+8],99
+   1322	04EF  76 05			     jbe     short @23@926
+   1323	04F1			     @23@898:
+   1324					;
+   1325					;			       tamreal = 3;
+   1326					;
+   1327	04F1  BE 0003			     mov     si,3
+   1328	04F4  EB 16			     jmp     short @23@1066
+   1329	04F6			     @23@926:
+   1330					;
+   1331					;			    else
+   1332					;			       if (i>9)
+   1333					;
+   1334	04F6  83 7E 0A 00		     cmp     word ptr [bp+10],0
+   1335	04FA  72 0D			     jb	     short @23@1038
+   1336	04FC  77 06			     ja	     short @23@1010
+   1337	04FE  83 7E 08 09		     cmp     word ptr [bp+8],9
+   1338	0502  76 05			     jbe     short @23@1038
+   1339	0504			     @23@1010:
+   1340					;
+   1341					;				  tamreal = 2;
+   1342					;
+   1343	0504  BE 0002			     mov     si,2
+   1344	0507  EB 03			     jmp     short @23@1066
+   1345	0509			     @23@1038:
+   1346					;
+   1347					;			       else
+   1348					;				  tamreal = 1;
+   1349					;
+   1350	0509  BE 0001			     mov     si,1
+   1351	050C			     @23@1066:
+   1352					;
+   1353					;      if (tam>10)
+   1354					;
+   1355	050C  83 FF 0A			     cmp     di,10
+   1356	050F  76 03			     jbe     short @23@1122
+   1357					;
+   1358					;	  tam =	10;
+   1359					;
+   1360	0511  BF 000A			     mov     di,10
+   1361	0514			     @23@1122:
+   1362					;
+   1363					;      if (tamreal>tam)
+   1364					;
+   1365	0514  3B F7			     cmp     si,di
+   1366	0516  76 02			     jbe     short @23@1178
+   1367					;
+   1368					;	  tam =	tamreal;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 25
+lib.ASM
+
+
+
+   1369					;
+   1370	0518  8B FE			     mov     di,si
+   1371	051A			     @23@1178:
+   1372					;
+   1373					;      for (dig=0;dig<tam-1;++dig)
+   1374					;
+   1375	051A  C7 46 FE 0000		     mov     word ptr [bp-2],0
+   1376	051F  EB 17			     jmp     short @23@1262
+   1377	0521			     @23@1206:
+   1378					;
+   1379					;	   div*=10;
+   1380					;
+   1381	0521  33 C9			     xor     cx,cx
+   1382	0523  BB 000A			     mov     bx,10
+   1383	0526  8B 56 FA			     mov     dx,word ptr [bp-6]
+   1384	0529  8B 46 F8			     mov     ax,word ptr [bp-8]
+   1385	052C  E8 0000e			     call    near ptr N_LXMUL@
+   1386	052F  89 56 FA			     mov     word ptr [bp-6],dx
+   1387	0532  89 46 F8			     mov     word ptr [bp-8],ax
+   1388	0535  FF 46 FE			     inc     word ptr [bp-2]
+   1389	0538			     @23@1262:
+   1390	0538  8B C7			     mov     ax,di
+   1391	053A  48			     dec     ax
+   1392	053B  3B 46 FE			     cmp     ax,word ptr [bp-2]
+   1393	053E  77 E1			     ja	     short @23@1206
+   1394	0540  E9 007F			     jmp     @23@1598
+   1395	0543			     @23@1318:
+   1396					;
+   1397					;      while (div>1)  {
+   1398					;	    if (i<div)	{
+   1399					;
+   1400	0543  8B 46 0A			     mov     ax,word ptr [bp+10]
+   1401	0546  8B 56 08			     mov     dx,word ptr [bp+8]
+   1402	0549  3B 46 FA			     cmp     ax,word ptr [bp-6]
+   1403	054C  77 24			     ja	     short @23@1542
+   1404	054E  72 05			     jb	     short @23@1402
+   1405	0550  3B 56 F8			     cmp     dx,word ptr [bp-8]
+   1406	0553  73 1D			     jae     short @23@1542
+   1407	0555			     @23@1402:
+   1408					;
+   1409					;	       if (!x)
+   1410					;
+   1411	0555  83 7E FC 00		     cmp     word ptr [bp-4],0
+   1412	0559  75 0B			     jne     short @23@1458
+   1413					;
+   1414					;		  *str++=c;
+   1415					;
+   1416	055B  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1417	055E  8A 46 0E			     mov     al,byte ptr [bp+14]
+   1418	0561  26: 88 07			     mov     byte ptr es:[bx],al
+   1419	0564  EB 07			     jmp     short @23@1486
+   1420	0566			     @23@1458:
+   1421					;
+   1422					;	       else
+   1423					;		  *str++='0';
+   1424					;
+   1425	0566  C4 5E 04			     les     bx,dword ptr [bp+4]
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 26
+lib.ASM
+
+
+
+   1426	0569  26: C6 07	30		     mov     byte ptr es:[bx],48
+   1427	056D			     @23@1486:
+   1428	056D  FF 46 04			     inc     word ptr [bp+4]
+   1429					;
+   1430					;	    }
+   1431					;
+   1432	0570  EB 3A			     jmp     short @23@1570
+   1433	0572			     @23@1542:
+   1434					;
+   1435					;	    else  {
+   1436					;	       x = 1;
+   1437					;
+   1438	0572  C7 46 FC 0001		     mov     word ptr [bp-4],1
+   1439					;
+   1440					;	       dig   = i / div;
+   1441					;
+   1442	0577  FF 76 FA			     push    word ptr [bp-6]
+   1443	057A  FF 76 F8			     push    word ptr [bp-8]
+   1444	057D  FF 76 0A			     push    word ptr [bp+10]
+   1445	0580  FF 76 08			     push    word ptr [bp+8]
+   1446	0583  E8 0000e			     call    near ptr N_LUDIV@
+   1447	0586  89 46 FE			     mov     word ptr [bp-2],ax
+   1448					;
+   1449					;	       *str++= (dig+'0');
+   1450					;
+   1451	0589  8A 46 FE			     mov     al,byte ptr [bp-2]
+   1452	058C  04 30			     add     al,48
+   1453	058E  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1454	0591  26: 88 07			     mov     byte ptr es:[bx],al
+   1455	0594  FF 46 04			     inc     word ptr [bp+4]
+   1456					;
+   1457					;	       i = i % div;
+   1458					;
+   1459	0597  FF 76 FA			     push    word ptr [bp-6]
+   1460	059A  FF 76 F8			     push    word ptr [bp-8]
+   1461	059D  FF 76 0A			     push    word ptr [bp+10]
+   1462	05A0  FF 76 08			     push    word ptr [bp+8]
+   1463	05A3  E8 0000e			     call    near ptr N_LUMOD@
+   1464	05A6  89 56 0A			     mov     word ptr [bp+10],dx
+   1465	05A9  89 46 08			     mov     word ptr [bp+8],ax
+   1466	05AC			     @23@1570:
+   1467					;
+   1468					;	    }
+   1469					;	    div	= div/10;
+   1470					;
+   1471	05AC  33 C0			     xor     ax,ax
+   1472	05AE  BA 000A			     mov     dx,10
+   1473	05B1  50			     push    ax
+   1474	05B2  52			     push    dx
+   1475	05B3  FF 76 FA			     push    word ptr [bp-6]
+   1476	05B6  FF 76 F8			     push    word ptr [bp-8]
+   1477	05B9  E8 0000e			     call    near ptr N_LUDIV@
+   1478	05BC  89 56 FA			     mov     word ptr [bp-6],dx
+   1479	05BF  89 46 F8			     mov     word ptr [bp-8],ax
+   1480	05C2			     @23@1598:
+   1481	05C2  83 7E FA 00		     cmp     word ptr [bp-6],0
+   1482	05C6  76 03			     jbe     @@0
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 27
+lib.ASM
+
+
+
+   1483	05C8  E9 FF78			     jmp     @23@1318
+   1484	05CB			     @@0:
+   1485	05CB  75 09			     jne     short @23@1682
+   1486	05CD  83 7E F8 01		     cmp     word ptr [bp-8],1
+   1487	05D1  76 03			     jbe     @@1
+   1488	05D3  E9 FF6D			     jmp     @23@1318
+   1489	05D6			     @@1:
+   1490	05D6			     @23@1682:
+   1491					;
+   1492					;      }
+   1493					;      *str++= (i+'0');
+   1494					;
+   1495	05D6  8A 46 08			     mov     al,byte ptr [bp+8]
+   1496	05D9  04 30			     add     al,48
+   1497	05DB  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1498	05DE  26: 88 07			     mov     byte ptr es:[bx],al
+   1499	05E1  FF 46 04			     inc     word ptr [bp+4]
+   1500					;
+   1501					;      *str = '\0';
+   1502					;
+   1503	05E4  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1504	05E7  26: C6 07	00		     mov     byte ptr es:[bx],0
+   1505					;
+   1506					;    }
+   1507					;
+   1508	05EB  5F			     pop     di
+   1509	05EC  5E			     pop     si
+   1510	05ED  8B E5			     mov     sp,bp
+   1511	05EF  5D			     pop     bp
+   1512	05F0  C3			     ret
+   1513	05F1			     _unsignedlongtostr	     endp
+   1514					;
+   1515					;    void unsignedtostrhexa(char far *str,unsigned i)
+   1516					;
+   1517					     assume  cs:_TEXT
+   1518	05F1			     _unsignedtostrhexa	     proc    near
+   1519	05F1  55			     push    bp
+   1520	05F2  8B EC			     mov     bp,sp
+   1521	05F4  83 EC 02			     sub     sp,2
+   1522	05F7  56			     push    si
+   1523					;
+   1524					;    {
+   1525					;      unsigned	dig,div=4096;
+   1526					;
+   1527	05F8  BE 1000			     mov     si,4096
+   1528	05FB  EB 48			     jmp     short @24@282
+   1529	05FD			     @24@58:
+   1530					;
+   1531					;
+   1532					;      while (div>1)  {
+   1533					;	    if (i<div)
+   1534					;
+   1535	05FD  39 76 08			     cmp     word ptr [bp+8],si
+   1536	0600  73 0C			     jae     short @24@114
+   1537					;
+   1538					;	       *str++='0';
+   1539					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 28
+lib.ASM
+
+
+
+   1540	0602  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1541	0605  26: C6 07	30		     mov     byte ptr es:[bx],48
+   1542	0609  FF 46 04			     inc     word ptr [bp+4]
+   1543	060C  EB 2F			     jmp     short @24@254
+   1544	060E			     @24@114:
+   1545					;
+   1546					;	    else  {
+   1547					;	       dig   = i / div;
+   1548					;
+   1549	060E  8B 46 08			     mov     ax,word ptr [bp+8]
+   1550	0611  33 D2			     xor     dx,dx
+   1551	0613  F7 F6			     div     si
+   1552	0615  89 46 FE			     mov     word ptr [bp-2],ax
+   1553					;
+   1554					;	       if (dig<10)
+   1555					;
+   1556	0618  83 7E FE 0A		     cmp     word ptr [bp-2],10
+   1557	061C  73 07			     jae     short @24@170
+   1558					;
+   1559					;		  *str++= (dig+'0');
+   1560					;
+   1561	061E  8A 46 FE			     mov     al,byte ptr [bp-2]
+   1562	0621  04 30			     add     al,48
+   1563	0623  EB 05			     jmp     short @24@198
+   1564	0625			     @24@170:
+   1565					;
+   1566					;	       else
+   1567					;		  *str++= (dig-10+'A');
+   1568					;
+   1569	0625  8A 46 FE			     mov     al,byte ptr [bp-2]
+   1570	0628  04 37			     add     al,55
+   1571	062A			     @24@198:
+   1572	062A  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1573	062D  26: 88 07			     mov     byte ptr es:[bx],al
+   1574	0630  FF 46 04			     inc     word ptr [bp+4]
+   1575					;
+   1576					;	       i = i % div;
+   1577					;
+   1578	0633  8B 46 08			     mov     ax,word ptr [bp+8]
+   1579	0636  33 D2			     xor     dx,dx
+   1580	0638  F7 F6			     div     si
+   1581	063A  89 56 08			     mov     word ptr [bp+8],dx
+   1582	063D			     @24@254:
+   1583					;
+   1584					;	    }
+   1585					;	    div	= div/16;
+   1586					;
+   1587	063D  8B C6			     mov     ax,si
+   1588	063F  B1 04			     mov     cl,4
+   1589	0641  D3 E8			     shr     ax,cl
+   1590	0643  8B F0			     mov     si,ax
+   1591	0645			     @24@282:
+   1592	0645  83 FE 01			     cmp     si,1
+   1593	0648  77 B3			     ja	     short @24@58
+   1594					;
+   1595					;      }
+   1596					;      if (i<10)
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 29
+lib.ASM
+
+
+
+   1597					;
+   1598	064A  83 7E 08 0A		     cmp     word ptr [bp+8],10
+   1599	064E  73 07			     jae     short @24@366
+   1600					;
+   1601					;	  *str++= (i+'0');
+   1602					;
+   1603	0650  8A 46 08			     mov     al,byte ptr [bp+8]
+   1604	0653  04 30			     add     al,48
+   1605	0655  EB 05			     jmp     short @24@394
+   1606	0657			     @24@366:
+   1607					;
+   1608					;      else
+   1609					;	  *str++= (i-10+'A');
+   1610					;
+   1611	0657  8A 46 08			     mov     al,byte ptr [bp+8]
+   1612	065A  04 37			     add     al,55
+   1613	065C			     @24@394:
+   1614	065C  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1615	065F  26: 88 07			     mov     byte ptr es:[bx],al
+   1616	0662  FF 46 04			     inc     word ptr [bp+4]
+   1617					;
+   1618					;      *str = '\0';
+   1619					;
+   1620	0665  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1621	0668  26: C6 07	00		     mov     byte ptr es:[bx],0
+   1622					;
+   1623					;    }
+   1624					;
+   1625	066C  5E			     pop     si
+   1626	066D  8B E5			     mov     sp,bp
+   1627	066F  5D			     pop     bp
+   1628	0670  C3			     ret
+   1629	0671			     _unsignedtostrhexa	     endp
+   1630					;
+   1631					;    void inttostr(char	far *str,int i)
+   1632					;
+   1633					     assume  cs:_TEXT
+   1634	0671			     _inttostr	     proc    near
+   1635	0671  55			     push    bp
+   1636	0672  8B EC			     mov     bp,sp
+   1637	0674  83 EC 02			     sub     sp,2
+   1638	0677  56			     push    si
+   1639	0678  57			     push    di
+   1640	0679  8B 4E 08			     mov     cx,word ptr [bp+8]
+   1641					;
+   1642					;    {
+   1643					;      int dig,div=10000,fimzeroesq=0;
+   1644					;
+   1645	067C  BE 2710			     mov     si,10000
+   1646	067F  33 FF			     xor     di,di
+   1647					;
+   1648					;
+   1649					;      if (i==-32768)  {
+   1650					;
+   1651	0681  81 F9 8000		     cmp     cx,-32768
+   1652	0685  75 3B			     jne     short @25@86
+   1653					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 30
+lib.ASM
+
+
+
+   1654					;	  *str++='-';
+   1655					;
+   1656	0687  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1657	068A  26: C6 07	2D		     mov     byte ptr es:[bx],45
+   1658	068E  FF 46 04			     inc     word ptr [bp+4]
+   1659					;
+   1660					;	  *str++='3';
+   1661					;
+   1662	0691  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1663	0694  26: C6 07	33		     mov     byte ptr es:[bx],51
+   1664	0698  FF 46 04			     inc     word ptr [bp+4]
+   1665					;
+   1666					;	  *str++='2';
+   1667					;
+   1668	069B  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1669	069E  26: C6 07	32		     mov     byte ptr es:[bx],50
+   1670	06A2  FF 46 04			     inc     word ptr [bp+4]
+   1671					;
+   1672					;	  *str++='7';
+   1673					;
+   1674	06A5  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1675	06A8  26: C6 07	37		     mov     byte ptr es:[bx],55
+   1676	06AC  FF 46 04			     inc     word ptr [bp+4]
+   1677					;
+   1678					;	  *str++='6';
+   1679					;
+   1680	06AF  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1681	06B2  26: C6 07	36		     mov     byte ptr es:[bx],54
+   1682	06B6  FF 46 04			     inc     word ptr [bp+4]
+   1683					;
+   1684					;	  *str++='8';
+   1685					;
+   1686	06B9  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1687	06BC  26: C6 07	38		     mov     byte ptr es:[bx],56
+   1688	06C0  EB 63			     jmp     short @25@394
+   1689	06C2			     @25@86:
+   1690					;
+   1691					;      }
+   1692					;      else  {
+   1693					;	  if (i<0)  {
+   1694					;
+   1695	06C2  0B C9			     or	     cx,cx
+   1696	06C4  7D 10			     jge     short @25@142
+   1697					;
+   1698					;	     *str++='-';
+   1699					;
+   1700	06C6  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1701	06C9  26: C6 07	2D		     mov     byte ptr es:[bx],45
+   1702	06CD  FF 46 04			     inc     word ptr [bp+4]
+   1703					;
+   1704					;	     i = -i;
+   1705					;
+   1706	06D0  8B C1			     mov     ax,cx
+   1707	06D2  F7 D8			     neg     ax
+   1708	06D4  8B C8			     mov     cx,ax
+   1709	06D6			     @25@142:
+   1710	06D6  EB 3E			     jmp     short @25@338
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 31
+lib.ASM
+
+
+
+   1711	06D8			     @25@170:
+   1712					;
+   1713					;	  }
+   1714					;	  while	(div>1)	 {
+   1715					;		if (i<div)  {
+   1716					;
+   1717	06D8  3B CE			     cmp     cx,si
+   1718	06DA  7D 10			     jge     short @25@282
+   1719					;
+   1720					;		   if (fimzeroesq!=0)
+   1721					;
+   1722	06DC  0B FF			     or	     di,di
+   1723	06DE  74 0A			     je	     short @25@254
+   1724					;
+   1725					;		      *str++='0';
+   1726					;
+   1727	06E0  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1728	06E3  26: C6 07	30		     mov     byte ptr es:[bx],48
+   1729	06E7  FF 46 04			     inc     word ptr [bp+4]
+   1730	06EA			     @25@254:
+   1731					;
+   1732					;		}
+   1733					;
+   1734	06EA  EB 20			     jmp     short @25@310
+   1735	06EC			     @25@282:
+   1736					;
+   1737					;		else  {
+   1738					;		   fimzeroesq=1;
+   1739					;
+   1740	06EC  BF 0001			     mov     di,1
+   1741					;
+   1742					;		   dig	 = i / div;
+   1743					;
+   1744	06EF  8B C1			     mov     ax,cx
+   1745	06F1  99			     cwd
+   1746	06F2  F7 FE			     idiv    si
+   1747	06F4  89 46 FE			     mov     word ptr [bp-2],ax
+   1748					;
+   1749					;		   *str++= (dig+'0');
+   1750					;
+   1751	06F7  8A 46 FE			     mov     al,byte ptr [bp-2]
+   1752	06FA  04 30			     add     al,48
+   1753	06FC  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1754	06FF  26: 88 07			     mov     byte ptr es:[bx],al
+   1755	0702  FF 46 04			     inc     word ptr [bp+4]
+   1756					;
+   1757					;		   i = i % div;
+   1758					;
+   1759	0705  8B C1			     mov     ax,cx
+   1760	0707  99			     cwd
+   1761	0708  F7 FE			     idiv    si
+   1762	070A  8B CA			     mov     cx,dx
+   1763	070C			     @25@310:
+   1764					;
+   1765					;		}
+   1766					;		div = div/10;
+   1767					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 32
+lib.ASM
+
+
+
+   1768	070C  8B C6			     mov     ax,si
+   1769	070E  BB 000A			     mov     bx,10
+   1770	0711  99			     cwd
+   1771	0712  F7 FB			     idiv    bx
+   1772	0714  8B F0			     mov     si,ax
+   1773	0716			     @25@338:
+   1774	0716  83 FE 01			     cmp     si,1
+   1775	0719  7F BD			     jg	     short @25@170
+   1776					;
+   1777					;	   }
+   1778					;	   *str++= (i+'0');
+   1779					;
+   1780	071B  8A C1			     mov     al,cl
+   1781	071D  04 30			     add     al,48
+   1782	071F  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1783	0722  26: 88 07			     mov     byte ptr es:[bx],al
+   1784	0725			     @25@394:
+   1785	0725  FF 46 04			     inc     word ptr [bp+4]
+   1786					;
+   1787					;      }
+   1788					;      *str = '\0';
+   1789					;
+   1790	0728  C4 5E 04			     les     bx,dword ptr [bp+4]
+   1791	072B  26: C6 07	00		     mov     byte ptr es:[bx],0
+   1792					;
+   1793					;    }
+   1794					;
+   1795	072F  5F			     pop     di
+   1796	0730  5E			     pop     si
+   1797	0731  8B E5			     mov     sp,bp
+   1798	0733  5D			     pop     bp
+   1799	0734  C3			     ret
+   1800	0735			     _inttostr	     endp
+   1801					;
+   1802					;    void reboot()
+   1803					;
+   1804					     assume  cs:_TEXT
+   1805	0735			     _reboot proc    near
+   1806	0735  55			     push    bp
+   1807	0736  8B EC			     mov     bp,sp
+   1808					;
+   1809					;    {
+   1810					;      asm {
+   1811					;	 mov  ah,SC_REBOOT
+   1812					;
+   1813	0738  B4 0A			     mov       ah,10
+   1814					;
+   1815					;	 int  22h
+   1816					;
+   1817	073A  CD 22			     int       22h
+   1818					;
+   1819					;      }
+   1820					;    }
+   1821					;
+   1822	073C  5D			     pop     bp
+   1823	073D  C3			     ret
+   1824	073E			     _reboot endp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 33
+lib.ASM
+
+
+
+   1825					;
+   1826					;    pid_t fork(void (*fun)())
+   1827					;
+   1828					     assume  cs:_TEXT
+   1829	073E			     _fork   proc    near
+   1830	073E  55			     push    bp
+   1831	073F  8B EC			     mov     bp,sp
+   1832					;
+   1833					;    {
+   1834					;      _BX = miniSO_CODESEGMENT;
+   1835					;
+   1836	0741  BB 07E0			     mov     bx,2016
+   1837					;
+   1838					;      _CX = (unsigned)fun;
+   1839					;
+   1840	0744  8B 4E 04			     mov     cx,word ptr [bp+4]
+   1841					;
+   1842					;      asm {
+   1843					;	  mov  ah,SC_FORK
+   1844					;
+   1845	0747  B4 0B			     mov       ah,11
+   1846					;
+   1847					;	  int  22h
+   1848					;
+   1849	0749  CD 22			     int       22h
+   1850					;
+   1851					;      }
+   1852					;      return _AX;
+   1853					;
+   1854	074B  EB 00			     jmp     short @27@142
+   1855	074D			     @27@142:
+   1856					;
+   1857					;    }
+   1858					;
+   1859	074D  5D			     pop     bp
+   1860	074E  C3			     ret
+   1861	074F			     _fork   endp
+   1862					;
+   1863					;    int kill(pid_t pid)
+   1864					;
+   1865					     assume  cs:_TEXT
+   1866	074F			     _kill   proc    near
+   1867	074F  55			     push    bp
+   1868	0750  8B EC			     mov     bp,sp
+   1869					;
+   1870					;    {
+   1871					;      _BX = pid;
+   1872					;
+   1873	0752  8B 5E 04			     mov     bx,word ptr [bp+4]
+   1874					;
+   1875					;      asm {
+   1876					;	 mov ah,SC_KILL
+   1877					;
+   1878	0755  B4 0C			     mov      ah,12
+   1879					;
+   1880					;	 int 22h
+   1881					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 34
+lib.ASM
+
+
+
+   1882	0757  CD 22			     int      22h
+   1883					;
+   1884					;      }
+   1885					;      return _AX;
+   1886					;
+   1887	0759  EB 00			     jmp     short @28@142
+   1888	075B			     @28@142:
+   1889					;
+   1890					;    }
+   1891					;
+   1892	075B  5D			     pop     bp
+   1893	075C  C3			     ret
+   1894	075D			     _kill   endp
+   1895					;
+   1896					;    pid_t wait(int far	*status)
+   1897					;
+   1898					     assume  cs:_TEXT
+   1899	075D			     _wait   proc    near
+   1900	075D  55			     push    bp
+   1901	075E  8B EC			     mov     bp,sp
+   1902					;
+   1903					;    {
+   1904					;	     _BX = FP_SEG(status);
+   1905					;
+   1906	0760  FF 76 06			     push    word ptr [bp+6]
+   1907	0763  FF 76 04			     push    word ptr [bp+4]
+   1908	0766  E8 0000e			     call    near ptr _FP_SEG
+   1909	0769  59			     pop     cx
+   1910	076A  59			     pop     cx
+   1911	076B  8B D8			     mov     bx,ax
+   1912					;
+   1913					;	     _CX = FP_OFF(status);
+   1914					;
+   1915	076D  FF 76 06			     push    word ptr [bp+6]
+   1916	0770  FF 76 04			     push    word ptr [bp+4]
+   1917	0773  E8 0000e			     call    near ptr _FP_OFF
+   1918	0776  59			     pop     cx
+   1919	0777  59			     pop     cx
+   1920	0778  8B C8			     mov     cx,ax
+   1921					;
+   1922					;	     asm     {
+   1923					;		     mov     ah,SC_WAIT
+   1924					;
+   1925	077A  B4 0E			     mov	     ah,14
+   1926					;
+   1927					;		     int     22h
+   1928					;
+   1929	077C  CD 22			     int	     22h
+   1930					;
+   1931					;	     }
+   1932					;	     return _AX;
+   1933					;
+   1934	077E  EB 00			     jmp     short @29@142
+   1935	0780			     @29@142:
+   1936					;
+   1937					;    }
+   1938					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 35
+lib.ASM
+
+
+
+   1939	0780  5D			     pop     bp
+   1940	0781  C3			     ret
+   1941	0782			     _wait   endp
+   1942					;
+   1943					;    pid_t waitpid(pid_t pid,int far *status)
+   1944					;
+   1945					     assume  cs:_TEXT
+   1946	0782			     _waitpid	     proc    near
+   1947	0782  55			     push    bp
+   1948	0783  8B EC			     mov     bp,sp
+   1949					;
+   1950					;    {
+   1951					;	     _BX = pid;
+   1952					;
+   1953	0785  8B 5E 04			     mov     bx,word ptr [bp+4]
+   1954					;
+   1955					;	     _CX = FP_SEG(status);
+   1956					;
+   1957	0788  FF 76 08			     push    word ptr [bp+8]
+   1958	078B  FF 76 06			     push    word ptr [bp+6]
+   1959	078E  E8 0000e			     call    near ptr _FP_SEG
+   1960	0791  59			     pop     cx
+   1961	0792  59			     pop     cx
+   1962	0793  8B C8			     mov     cx,ax
+   1963					;
+   1964					;	     _DX = FP_OFF(status);
+   1965					;
+   1966	0795  FF 76 08			     push    word ptr [bp+8]
+   1967	0798  FF 76 06			     push    word ptr [bp+6]
+   1968	079B  E8 0000e			     call    near ptr _FP_OFF
+   1969	079E  59			     pop     cx
+   1970	079F  59			     pop     cx
+   1971	07A0  8B D0			     mov     dx,ax
+   1972					;
+   1973					;	     asm     {
+   1974					;		     mov     ah,SC_WAITPID
+   1975					;
+   1976	07A2  B4 0D			     mov	     ah,13
+   1977					;
+   1978					;		     int     22h
+   1979					;
+   1980	07A4  CD 22			     int	     22h
+   1981					;
+   1982					;	     }
+   1983					;	     return _AX;
+   1984					;
+   1985	07A6  EB 00			     jmp     short @30@142
+   1986	07A8			     @30@142:
+   1987					;
+   1988					;    }
+   1989					;
+   1990	07A8  5D			     pop     bp
+   1991	07A9  C3			     ret
+   1992	07AA			     _waitpid	     endp
+   1993					;
+   1994					;    void exit(int codfim)
+   1995					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 36
+lib.ASM
+
+
+
+   1996					     assume  cs:_TEXT
+   1997	07AA			     _exit   proc    near
+   1998	07AA  55			     push    bp
+   1999	07AB  8B EC			     mov     bp,sp
+   2000					;
+   2001					;    {
+   2002					;      _BX = codfim;
+   2003					;
+   2004	07AD  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2005					;
+   2006					;      asm {
+   2007					;	 mov ah,SC_EXIT
+   2008					;
+   2009	07B0  B4 0F			     mov      ah,15
+   2010					;
+   2011					;	 int 22h
+   2012					;
+   2013	07B2  CD 22			     int      22h
+   2014					;
+   2015					;      }
+   2016					;    }
+   2017					;
+   2018	07B4  5D			     pop     bp
+   2019	07B5  C3			     ret
+   2020	07B6			     _exit   endp
+   2021					;
+   2022					;    pid_t getpid()
+   2023					;
+   2024					     assume  cs:_TEXT
+   2025	07B6			     _getpid proc    near
+   2026	07B6  55			     push    bp
+   2027	07B7  8B EC			     mov     bp,sp
+   2028					;
+   2029					;    {
+   2030					;      asm {
+   2031					;	 mov ah,SC_GETPID
+   2032					;
+   2033	07B9  B4 10			     mov      ah,16
+   2034					;
+   2035					;	 int 22h
+   2036					;
+   2037	07BB  CD 22			     int      22h
+   2038					;
+   2039					;      }
+   2040					;      return _AX;
+   2041					;
+   2042	07BD  EB 00			     jmp     short @32@114
+   2043	07BF			     @32@114:
+   2044					;
+   2045					;    }
+   2046					;
+   2047	07BF  5D			     pop     bp
+   2048	07C0  C3			     ret
+   2049	07C1			     _getpid endp
+   2050					;
+   2051					;    pid_t getppid()
+   2052					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 37
+lib.ASM
+
+
+
+   2053					     assume  cs:_TEXT
+   2054	07C1			     _getppid	     proc    near
+   2055	07C1  55			     push    bp
+   2056	07C2  8B EC			     mov     bp,sp
+   2057					;
+   2058					;    {
+   2059					;      asm {
+   2060					;	 mov ah,SC_GETPPID
+   2061					;
+   2062	07C4  B4 11			     mov      ah,17
+   2063					;
+   2064					;	 int 22h
+   2065					;
+   2066	07C6  CD 22			     int      22h
+   2067					;
+   2068					;      }
+   2069					;      return _AX;
+   2070					;
+   2071	07C8  EB 00			     jmp     short @33@114
+   2072	07CA			     @33@114:
+   2073					;
+   2074					;    }
+   2075					;
+   2076	07CA  5D			     pop     bp
+   2077	07CB  C3			     ret
+   2078	07CC			     _getppid	     endp
+   2079					;
+   2080					;    int sendsignal(pid_t pid, signal_t	signal)
+   2081					;
+   2082					     assume  cs:_TEXT
+   2083	07CC			     _sendsignal     proc    near
+   2084	07CC  55			     push    bp
+   2085	07CD  8B EC			     mov     bp,sp
+   2086					;
+   2087					;    {
+   2088					;
+   2089					;      _BX = pid;
+   2090					;
+   2091	07CF  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2092					;
+   2093					;      _CX = signal;
+   2094					;
+   2095	07D2  8B 4E 06			     mov     cx,word ptr [bp+6]
+   2096					;
+   2097					;      asm {
+   2098					;	  mov  ah,SC_SENDSIGNAL
+   2099					;
+   2100	07D5  B4 12			     mov       ah,18
+   2101					;
+   2102					;	  int  22h
+   2103					;
+   2104	07D7  CD 22			     int       22h
+   2105					;
+   2106					;      }
+   2107					;      return _AX;
+   2108					;
+   2109	07D9  EB 00			     jmp     short @34@142
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 38
+lib.ASM
+
+
+
+   2110	07DB			     @34@142:
+   2111					;
+   2112					;    }
+   2113					;
+   2114	07DB  5D			     pop     bp
+   2115	07DC  C3			     ret
+   2116	07DD			     _sendsignal     endp
+   2117					;
+   2118					;    void waitsignal(signal_t signal)
+   2119					;
+   2120					     assume  cs:_TEXT
+   2121	07DD			     _waitsignal     proc    near
+   2122	07DD  55			     push    bp
+   2123	07DE  8B EC			     mov     bp,sp
+   2124					;
+   2125					;    {
+   2126					;      _BX = signal;
+   2127					;
+   2128	07E0  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2129					;
+   2130					;      asm {
+   2131					;	  mov  ah,SC_WAITSIGNAL
+   2132					;
+   2133	07E3  B4 13			     mov       ah,19
+   2134					;
+   2135					;	  int  22h
+   2136					;
+   2137	07E5  CD 22			     int       22h
+   2138					;
+   2139					;      }
+   2140					;    }
+   2141					;
+   2142	07E7  5D			     pop     bp
+   2143	07E8  C3			     ret
+   2144	07E9			     _waitsignal     endp
+   2145					;
+   2146					;    semid_t semcreate (int value)
+   2147					;
+   2148					     assume  cs:_TEXT
+   2149	07E9			     _semcreate	     proc    near
+   2150	07E9  55			     push    bp
+   2151	07EA  8B EC			     mov     bp,sp
+   2152					;
+   2153					;    {
+   2154					;	     _BX = value;
+   2155					;
+   2156	07EC  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2157					;
+   2158					;	     asm     {
+   2159					;		     mov  ah,SC_SEMCREATE
+   2160					;
+   2161	07EF  B4 14			     mov       ah,20
+   2162					;
+   2163					;		     int  22h
+   2164					;
+   2165	07F1  CD 22			     int       22h
+   2166					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 39
+lib.ASM
+
+
+
+   2167					;	     }
+   2168					;	     return _AX;
+   2169					;
+   2170	07F3  EB 00			     jmp     short @36@142
+   2171	07F5			     @36@142:
+   2172					;
+   2173					;    }
+   2174					;
+   2175	07F5  5D			     pop     bp
+   2176	07F6  C3			     ret
+   2177	07F7			     _semcreate	     endp
+   2178					;
+   2179					;    int semset	(semid_t s,int value)
+   2180					;
+   2181					     assume  cs:_TEXT
+   2182	07F7			     _semset proc    near
+   2183	07F7  55			     push    bp
+   2184	07F8  8B EC			     mov     bp,sp
+   2185					;
+   2186					;    {
+   2187					;	     _BX = s;
+   2188					;
+   2189	07FA  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2190					;
+   2191					;	     _CX = value;
+   2192					;
+   2193	07FD  8B 4E 06			     mov     cx,word ptr [bp+6]
+   2194					;
+   2195					;	     asm     {
+   2196					;		     mov  ah,SC_SEMSET
+   2197					;
+   2198	0800  B4 15			     mov       ah,21
+   2199					;
+   2200					;		     int  22h
+   2201					;
+   2202	0802  CD 22			     int       22h
+   2203					;
+   2204					;	     }
+   2205					;	     return _AX;
+   2206					;
+   2207	0804  EB 00			     jmp     short @37@142
+   2208	0806			     @37@142:
+   2209					;
+   2210					;    }
+   2211					;
+   2212	0806  5D			     pop     bp
+   2213	0807  C3			     ret
+   2214	0808			     _semset endp
+   2215					;
+   2216					;    int semup (semid_t	s)
+   2217					;
+   2218					     assume  cs:_TEXT
+   2219	0808			     _semup  proc    near
+   2220	0808  55			     push    bp
+   2221	0809  8B EC			     mov     bp,sp
+   2222					;
+   2223					;    {
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 40
+lib.ASM
+
+
+
+   2224					;	     _BX = s;
+   2225					;
+   2226	080B  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2227					;
+   2228					;	     asm     {
+   2229					;		     mov  ah,SC_SEMUP
+   2230					;
+   2231	080E  B4 16			     mov       ah,22
+   2232					;
+   2233					;		     int  22h
+   2234					;
+   2235	0810  CD 22			     int       22h
+   2236					;
+   2237					;	     }
+   2238					;	     return _AX;
+   2239					;
+   2240	0812  EB 00			     jmp     short @38@142
+   2241	0814			     @38@142:
+   2242					;
+   2243					;    }
+   2244					;
+   2245	0814  5D			     pop     bp
+   2246	0815  C3			     ret
+   2247	0816			     _semup  endp
+   2248					;
+   2249					;    int semdown (semid_t s)
+   2250					;
+   2251					     assume  cs:_TEXT
+   2252	0816			     _semdown	     proc    near
+   2253	0816  55			     push    bp
+   2254	0817  8B EC			     mov     bp,sp
+   2255					;
+   2256					;    {
+   2257					;	     _BX = s;
+   2258					;
+   2259	0819  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2260					;
+   2261					;	     asm     {
+   2262					;		     mov  ah,SC_SEMDOWN
+   2263					;
+   2264	081C  B4 17			     mov       ah,23
+   2265					;
+   2266					;		     int  22h
+   2267					;
+   2268	081E  CD 22			     int       22h
+   2269					;
+   2270					;	     }
+   2271					;	     return _AX;
+   2272					;
+   2273	0820  EB 00			     jmp     short @39@142
+   2274	0822			     @39@142:
+   2275					;
+   2276					;    }
+   2277					;
+   2278	0822  5D			     pop     bp
+   2279	0823  C3			     ret
+   2280	0824			     _semdown	     endp
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 41
+lib.ASM
+
+
+
+   2281					;
+   2282					;    int semdestroy (semid_t s)
+   2283					;
+   2284					     assume  cs:_TEXT
+   2285	0824			     _semdestroy     proc    near
+   2286	0824  55			     push    bp
+   2287	0825  8B EC			     mov     bp,sp
+   2288					;
+   2289					;    {
+   2290					;	     _BX = s;
+   2291					;
+   2292	0827  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2293					;
+   2294					;	     asm     {
+   2295					;		     mov  ah,SC_SEMDESTROY
+   2296					;
+   2297	082A  B4 18			     mov       ah,24
+   2298					;
+   2299					;		     int  22h
+   2300					;
+   2301	082C  CD 22			     int       22h
+   2302					;
+   2303					;	     }
+   2304					;	     return _AX;
+   2305					;
+   2306	082E  EB 00			     jmp     short @40@142
+   2307	0830			     @40@142:
+   2308					;
+   2309					;    }
+   2310					;
+   2311	0830  5D			     pop     bp
+   2312	0831  C3			     ret
+   2313	0832			     _semdestroy     endp
+   2314					;
+   2315					;    int stop(pid_t pid){
+   2316					;
+   2317					     assume  cs:_TEXT
+   2318	0832			     _stop   proc    near
+   2319	0832  55			     push    bp
+   2320	0833  8B EC			     mov     bp,sp
+   2321					;
+   2322					;    _BX = pid;
+   2323					;
+   2324	0835  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2325					;
+   2326					;    asm {
+   2327					;    mov ah,SC_STOP
+   2328					;
+   2329	0838  B4 19			     mov      ah,25
+   2330					;
+   2331					;    int 22h
+   2332					;
+   2333	083A  CD 22			     int      22h
+   2334					;
+   2335					;    }
+   2336					;    return _AX;
+   2337					;
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 42
+lib.ASM
+
+
+
+   2338	083C  EB 00			     jmp     short @41@142
+   2339	083E			     @41@142:
+   2340					;
+   2341					;    }
+   2342					;
+   2343	083E  5D			     pop     bp
+   2344	083F  C3			     ret
+   2345	0840			     _stop   endp
+   2346					;
+   2347					;    int resume(pid_t pid){
+   2348					;
+   2349					     assume  cs:_TEXT
+   2350	0840			     _resume proc    near
+   2351	0840  55			     push    bp
+   2352	0841  8B EC			     mov     bp,sp
+   2353					;
+   2354					;    _BX = pid;
+   2355					;
+   2356	0843  8B 5E 04			     mov     bx,word ptr [bp+4]
+   2357					;
+   2358					;    asm {
+   2359					;    mov ah,SC_RESUME
+   2360					;
+   2361	0846  B4 1A			     mov      ah,26
+   2362					;
+   2363					;    int 22h
+   2364					;
+   2365	0848  CD 22			     int      22h
+   2366					;
+   2367					;    }
+   2368					;    return _AX;
+   2369					;
+   2370	084A  EB 00			     jmp     short @42@142
+   2371	084C			     @42@142:
+   2372					;
+   2373					;    }
+   2374					;
+   2375	084C  5D			     pop     bp
+   2376	084D  C3			     ret
+   2377	084E			     _resume endp
+   2378					     ?debug  C E9
+   2379					     ?debug  C FA00000000
+   2380	084E			     _TEXT   ends
+   2381	0000			     _DATA   segment word public 'DATA'
+   2382	0000			     s@	     label   byte
+   2383	0000			     _DATA   ends
+   2384	084E			     _TEXT   segment byte public 'CODE'
+   2385	084E			     _TEXT   ends
+   2386					     extrn   N_LUMOD@:far
+   2387					     extrn   N_LUDIV@:far
+   2388					     extrn   N_LXMUL@:far
+   2389					     public  _isalpha
+   2390					     public  _resume
+   2391					     public  _stop
+   2392					     public  _semdestroy
+   2393					     public  _semdown
+   2394					     public  _semup
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 43
+lib.ASM
+
+
+
+   2395					     public  _semset
+   2396					     public  _semcreate
+   2397					     public  _waitsignal
+   2398					     public  _sendsignal
+   2399					     public  _getppid
+   2400					     public  _getpid
+   2401					     public  _exit
+   2402					     public  _waitpid
+   2403					     public  _wait
+   2404					     public  _kill
+   2405					     public  _fork
+   2406					     public  _reboot
+   2407					     public  _inttostr
+   2408					     public  _unsignedtostrhexa
+   2409					     public  _unsignedlongtostr
+   2410					     public  _unsignedtostr
+   2411					     public  _atoi
+   2412					     public  _isdigit
+   2413					     public  _strlen
+   2414					     public  _strcmp
+   2415					     public  _strlwr
+   2416					     public  _strupr
+   2417					     public  _strncpy
+   2418					     public  _strcpy
+   2419					     public  _gettime
+   2420					     public  _getdate
+   2421					     public  _gotoxy
+   2422					     public  _wherey
+   2423					     public  _wherex
+   2424					     public  _setcolor
+   2425					     public  _getcolor
+   2426					     public  _putstrxy
+   2427					     public  _putstr
+   2428					     public  _clrscr
+   2429					     public  _getch
+   2430					     public  _putch
+   2431					     extrn   _FP_OFF:near
+   2432					     extrn   _FP_SEG:near
+   2433				     _s@     equ     s@
+   2434					     end
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 44
+Symbol Table
+
+
+
+
+Symbol Name		Type   Value			   Cref	(defined at #)
+
+??DATE			Text   "12/06/17"
+??FILENAME		Text   "lib	"
+??TIME			Text   "01:51:23"
+??VERSION		Number 030A
+@13@142			Near   _TEXT:014F		   471	#472
+@13@58			Near   _TEXT:0125		   #446	 460
+@13@86			Near   _TEXT:0137		   445	#457
+@14@142			Near   _TEXT:018D		   523	#526
+@14@198			Near   _TEXT:0198		   532	#538
+@14@226			Near   _TEXT:01A0		   544	#545
+@14@58			Near   _TEXT:016D		   #505	 525
+@14@86			Near   _TEXT:0180		   504	#520
+@15@142			Near   _TEXT:01D9		   580	583  #592
+@15@170			Near   _TEXT:01DC		   572	#597
+@15@226			Near   _TEXT:01ED		   607	#608
+@15@58			Near   _TEXT:01B9		   #573	 600
+@16@142			Near   _TEXT:0225		   642	645  #654
+@16@170			Near   _TEXT:0228		   634	#659
+@16@226			Near   _TEXT:0239		   669	#670
+@16@58			Near   _TEXT:0205		   #635	 662
+@17@114			Near   _TEXT:024D		   #699	 729  737
+@17@142			Near   _TEXT:024F		   694	#701
+@17@170			Near   _TEXT:0255		   685	#710
+@17@282			Near   _TEXT:0278		   724	#731
+@17@310			Near   _TEXT:027D		   700	730  #738
+@17@58			Near   _TEXT:0242		   #686	 715
+@18@142			Near   _TEXT:0297		   774	#775
+@18@58			Near   _TEXT:0286		   #758	 769
+@18@86			Near   _TEXT:0287		   757	#765
+@19@114			Near   _TEXT:02AB		   #803	 812
+@19@170			Near   _TEXT:02AF		   797	#806
+@19@198			Near   _TEXT:02B4		   804	805  #813
+@19@86			Near   _TEXT:02A9		   795	#798
+@20@142			Near   _TEXT:02D0		   835	#841
+@20@170			Near   _TEXT:02D3		   #846	 855
+@20@226			Near   _TEXT:02D7		   838	840  #849
+@20@254			Near   _TEXT:02DB		   847	848  #856
+@20@86			Near   _TEXT:02C6		   833	#836
+@21@170			Near   _TEXT:0307		   893	#900
+@21@226			Near   _TEXT:0316		   907	#916
+@21@282			Near   _TEXT:0322		   923	#928
+@21@310			Near   _TEXT:0324		   #930	 957
+@21@338			Near   _TEXT:033E		   929	#950
+@21@394			Near   _TEXT:0353		   964	#965
+@21@58			Near   _TEXT:02E9		   #882	 896  899
+@21@86			Near   _TEXT:02EC		   881	#890
+@22@142			Near   _TEXT:0380		   1008	 #1014
+@22@198			Near   _TEXT:038A		   1020	 #1026
+@22@254			Near   _TEXT:0394		   1032	 #1038
+@22@282			Near   _TEXT:0397		   1001	 1013  1025  1037  #1044
+@22@338			Near   _TEXT:03A2		   1049	 #1054
+@22@394			Near   _TEXT:03AA		   1059	 #1064
+@22@422			Near   _TEXT:03B1		   #1070  1083
+@22@478			Near   _TEXT:03BD		   1069	 #1079
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 45
+Symbol Table
+
+
+
+@22@534			Near   _TEXT:03C8		   #1085  1157
+@22@618			Near   _TEXT:03DD		   1096	 #1104
+@22@646			Near   _TEXT:03E4		   1103	 #1111
+@22@702			Near   _TEXT:03E9		   1091	 #1117
+@22@730			Near   _TEXT:040D		   1116	 #1145
+@22@758			Near   _TEXT:0418		   1084	 #1155
+@22@86			Near   _TEXT:0375		   996	#1002
+@23@1010		Near   _TEXT:0504		   1336	 #1339
+@23@1038		Near   _TEXT:0509		   1335	 1338  #1345
+@23@1066		Near   _TEXT:050C		   1216	 1232  1248  1264  1280	 1296  1312  1328  1344	 #1351
+@23@1122		Near   _TEXT:0514		   1356	 #1361
+@23@114			Near   _TEXT:0461		   1208	 #1211
+@23@1178		Near   _TEXT:051A		   1366	 #1371
+@23@1206		Near   _TEXT:0521		   #1377  1393
+@23@1262		Near   _TEXT:0538		   1376	 #1389
+@23@1318		Near   _TEXT:0543		   #1395  1483	1488
+@23@1402		Near   _TEXT:0555		   1404	 #1407
+@23@142			Near   _TEXT:0467		   1207	 1210  #1217
+@23@1458		Near   _TEXT:0566		   1412	 #1420
+@23@1486		Near   _TEXT:056D		   1419	 #1427
+@23@1542		Near   _TEXT:0572		   1403	 1406  #1433
+@23@1570		Near   _TEXT:05AC		   1432	 #1466
+@23@1598		Near   _TEXT:05C2		   1394	 #1480
+@23@1682		Near   _TEXT:05D6		   1485	 #1490
+@23@226			Near   _TEXT:0477		   1224	 #1227
+@23@254			Near   _TEXT:047D		   1223	 1226  #1233
+@23@338			Near   _TEXT:048D		   1240	 #1243
+@23@366			Near   _TEXT:0493		   1239	 1242  #1249
+@23@450			Near   _TEXT:04A2		   1256	 #1259
+@23@478			Near   _TEXT:04A7		   1255	 1258  #1265
+@23@562			Near   _TEXT:04B6		   1272	 #1275
+@23@590			Near   _TEXT:04BB		   1271	 1274  #1281
+@23@674			Near   _TEXT:04CA		   1288	 #1291
+@23@702			Near   _TEXT:04CF		   1287	 1290  #1297
+@23@786			Near   _TEXT:04DE		   1304	 #1307
+@23@814			Near   _TEXT:04E3		   1303	 1306  #1313
+@23@898			Near   _TEXT:04F1		   1320	 #1323
+@23@926			Near   _TEXT:04F6		   1319	 1322  #1329
+@24@114			Near   _TEXT:060E		   1536	 #1544
+@24@170			Near   _TEXT:0625		   1557	 #1564
+@24@198			Near   _TEXT:062A		   1563	 #1571
+@24@254			Near   _TEXT:063D		   1543	 #1582
+@24@282			Near   _TEXT:0645		   1528	 #1591
+@24@366			Near   _TEXT:0657		   1599	 #1606
+@24@394			Near   _TEXT:065C		   1605	 #1613
+@24@58			Near   _TEXT:05FD		   #1529  1593
+@25@142			Near   _TEXT:06D6		   1696	 #1709
+@25@170			Near   _TEXT:06D8		   #1711  1775
+@25@254			Near   _TEXT:06EA		   1723	 #1730
+@25@282			Near   _TEXT:06EC		   1718	 #1735
+@25@310			Near   _TEXT:070C		   1734	 #1763
+@25@338			Near   _TEXT:0716		   1710	 #1773
+@25@394			Near   _TEXT:0725		   1688	 #1784
+@25@86			Near   _TEXT:06C2		   1652	 #1689
+@27@142			Near   _TEXT:074D		   1854	 #1855
+@28@142			Near   _TEXT:075B		   1887	 #1888
+@29@142			Near   _TEXT:0780		   1934	 #1935
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 46
+Symbol Table
+
+
+
+@2@114			Near   _TEXT:0015		   72  #73
+@30@142			Near   _TEXT:07A8		   1985	 #1986
+@32@114			Near   _TEXT:07BF		   2042	 #2043
+@33@114			Near   _TEXT:07CA		   2071	 #2072
+@34@142			Near   _TEXT:07DB		   2109	 #2110
+@36@142			Near   _TEXT:07F5		   2170	 #2171
+@37@142			Near   _TEXT:0806		   2207	 #2208
+@38@142			Near   _TEXT:0814		   2240	 #2241
+@39@142			Near   _TEXT:0822		   2273	 #2274
+@40@142			Near   _TEXT:0830		   2306	 #2307
+@41@142			Near   _TEXT:083E		   2338	 #2339
+@42@142			Near   _TEXT:084C		   2370	 #2371
+@4@58			Near   _TEXT:0025		   #112	 128
+@4@86			Near   _TEXT:0034		   111	#125
+@5@58			Near   _TEXT:006D		   #169	 187
+@5@86			Near   _TEXT:0082		   168	#184
+@6@114			Near   _TEXT:0098		   217	#218
+@8@114			Near   _TEXT:00AF		   274	#275
+@9@114			Near   _TEXT:00BA		   303	#304
+@@0			Near   _TEXT:05CB		   1482	 #1484
+@@1			Near   _TEXT:05D6		   1487	 #1489
+@CPU			Text   0101H
+@CURSEG			Text   _TEXT			   #10	#14  #18  #22  #2381  #2384
+@FILENAME		Text   LIB
+@WORDSIZE		Text   2			   #10	#14  #18  #22  #2381  #2384
+B@			Byte   _BSS:0000		   #19
+B@W			Word   _BSS:0000		   #20
+D@			Byte   _DATA:0000		   #15
+D@W			Word   _DATA:0000		   #16
+N_LUDIV@		Far    ----:---- Extern		   1446	 1477  #2387
+N_LUMOD@		Far    ----:---- Extern		   1463	 #2386
+N_LXMUL@		Far    ----:---- Extern		   1385	 #2388
+S@			Byte   _DATA:0000		   #2382
+_ATOI			Near   _TEXT:02DD		   #867	 2411
+_CLRSCR			Near   _TEXT:0017		   #84	2428
+_EXIT			Near   _TEXT:07AA		   #1997  2401
+_FORK			Near   _TEXT:073E		   #1829  2405
+_FP_OFF			Near   ----:---- Extern		   365	407  1917  1968	 #2431
+_FP_SEG			Near   ----:---- Extern		   356	398  1908  1959	 #2432
+_GETCH			Near   _TEXT:000C		   #55	2429
+_GETCOLOR		Near   _TEXT:008F		   #200	 2425
+_GETDATE		Near   _TEXT:00CB		   #347	 2420
+_GETPID			Near   _TEXT:07B6		   #2025  2400
+_GETPPID		Near   _TEXT:07C1		   #2054  2399
+_GETTIME		Near   _TEXT:00EE		   #389	 2419
+_GOTOXY			Near   _TEXT:00BC		   #315	 2421
+_INTTOSTR		Near   _TEXT:0671		   #1634  2407
+_ISALPHA		Near   _TEXT:02B6		   #824	 2389
+_ISDIGIT		Near   _TEXT:0299		   #786	 954  2412
+_KILL			Near   _TEXT:074F		   #1866  2404
+_PUTCH			Near   _TEXT:0000		   #27	123  2430
+_PUTSTR			Near   _TEXT:0020		   #108	 2427
+_PUTSTRXY		Near   _TEXT:003F		   #139	 2426
+_REBOOT			Near   _TEXT:0735		   #1805  2406
+_RESUME			Near   _TEXT:0840		   #2350  2390
+_S@			Alias  S@			   #2433
+_SEMCREATE		Near   _TEXT:07E9		   #2149  2396
+Turbo Assembler	 Version 3.1	    12/06/17 01:51:23	    Page 47
+Symbol Table
+
+
+
+_SEMDESTROY		Near   _TEXT:0824		   #2285  2392
+_SEMDOWN		Near   _TEXT:0816		   #2252  2393
+_SEMSET			Near   _TEXT:07F7		   #2182  2395
+_SEMUP			Near   _TEXT:0808		   #2219  2394
+_SENDSIGNAL		Near   _TEXT:07CC		   #2083  2398
+_SETCOLOR		Near   _TEXT:009A		   #229	 2424
+_STOP			Near   _TEXT:0832		   #2318  2391
+_STRCMP			Near   _TEXT:023D		   #682	 2414
+_STRCPY			Near   _TEXT:0111		   #431	 2418
+_STRLEN			Near   _TEXT:027F		   #749	 2413
+_STRLWR			Near   _TEXT:01F1		   #620	 2415
+_STRNCPY		Near   _TEXT:0153		   #484	 2417
+_STRUPR			Near   _TEXT:01A5		   #558	 2416
+_UNSIGNEDLONGTOSTR	Near   _TEXT:0437		   #1185  2409
+_UNSIGNEDTOSTR		Near   _TEXT:0357		   #978	 2410
+_UNSIGNEDTOSTRHEXA	Near   _TEXT:05F1		   #1518  2408
+_WAIT			Near   _TEXT:075D		   #1899  2403
+_WAITPID		Near   _TEXT:0782		   #1946  2402
+_WAITSIGNAL		Near   _TEXT:07DD		   #2121  2397
+_WHEREX			Near   _TEXT:00A6		   #257	 2423
+_WHEREY			Near   _TEXT:00B1		   #286	 2422
+
+Macro Name						   Cref	(defined at #)
+
+$COMM							   #1
+
+Groups & Segments	Bit Size Align	Combine	Class	   Cref	(defined at #)
+
+DGROUP			Group				   #12	13
+  _BSS			16  0000 Word	Public	BSS	   12  #18
+  _DATA			16  0000 Word	Public	DATA	   12  #14  #2381
+_TEXT			16  084E Byte	Public	CODE	   #10	13  #22	 26  54	 83  107  138  199  228	 256  285  314	346  388  +
+							   430	483  557  619  681  748	 785  823  866	977  1184  1517	 1633	  +
+							   1804	 1828  1865  1898  1945	 1996  2024  2053  2082	 2120  2148  2181 +
+							   2218	 2251  2284  2317  2349	 #2384
+
